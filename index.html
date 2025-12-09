@@ -150,6 +150,9 @@
             box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
             transition: all 0.3s;
             animation: btnPulse 1.5s ease-in-out infinite;
+            pointer-events: auto;
+            position: relative;
+            z-index: 101;
         }
 
         @keyframes btnPulse {
@@ -229,7 +232,7 @@
 
         <div class="start-screen" id="startScreen">
             <div class="title">🚀 COSMIC CAT CHAOS 🐱</div>
-            <button class="start-btn" id="startBtn">🎮 PLAY!</button>
+            <button class="start-btn" id="startBtn" onclick="startGame()">🎮 PLAY!</button>
             <div class="instructions">
                 Move your mouse to fly the cosmic cat!<br>
                 🐟 Collect fish for points!<br>
@@ -241,7 +244,7 @@
         <div class="game-over-screen hidden" id="gameOverScreen">
             <div class="title">💥 GAME OVER 💥</div>
             <div class="final-score" id="finalScore">0</div>
-            <button class="restart-btn" id="restartBtn">🔄 PLAY AGAIN!</button>
+            <button class="restart-btn" id="restartBtn" onclick="startGame()">🔄 PLAY AGAIN!</button>
         </div>
     </div>
 
@@ -342,7 +345,7 @@
         let mouseY = canvas.height / 2;
 
         // Cat (Player)
-        const cat = {
+        let cat = {
             x: canvas.width / 2,
             y: canvas.height / 2,
             size: 40,
@@ -945,6 +948,7 @@
         }
 
         function startGame() {
+            console.log('Starting game...');
             initAudio();
             gameRunning = true;
             score = 0;
@@ -954,9 +958,22 @@
             difficulty = 1;
             powerUpActive = null;
             powerUpTimer = 0;
-            cat.x = canvas.width / 2;
-            cat.y = canvas.height / 2;
-            cat.invincible = 60;
+
+            // Reset cat position and state
+            cat = {
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                size: 40,
+                angle: 0,
+                targetX: canvas.width / 2,
+                targetY: canvas.height / 2,
+                trail: [],
+                invincible: 60
+            };
+
+            mouseX = canvas.width / 2;
+            mouseY = canvas.height / 2;
+
             fish = [];
             cucumbers = [];
             powerUps = [];
@@ -967,17 +984,18 @@
             comboEl.classList.remove('active');
             powerUpEl.classList.remove('active');
 
-            startScreen.classList.add('hidden');
-            gameOverScreen.classList.add('hidden');
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
 
             initStars();
+            console.log('Game started! gameRunning:', gameRunning);
         }
 
         function gameOver() {
             gameRunning = false;
             playSound('gameOver');
             finalScoreEl.textContent = score;
-            gameOverScreen.classList.remove('hidden');
+            gameOverScreen.style.display = 'flex';
         }
 
         // Event listeners
