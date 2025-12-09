@@ -469,16 +469,18 @@
         }
 
         function drawCat() {
-            // Draw trail
-            cat.trail.forEach((t, i) => {
+            // Draw trail - filter first, then draw
+            cat.trail = cat.trail.filter(t => {
                 t.alpha -= 0.05;
+                return t.alpha > 0.01;
+            });
+            cat.trail.forEach((t, i) => {
                 const hue = (Date.now() / 10 + i * 10) % 360;
-                ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${t.alpha * 0.5})`;
+                ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${Math.max(0, t.alpha * 0.5)})`;
                 ctx.beginPath();
-                ctx.arc(t.x, t.y, t.size * t.alpha, 0, Math.PI * 2);
+                ctx.arc(t.x, t.y, Math.max(1, t.size * t.alpha), 0, Math.PI * 2);
                 ctx.fill();
             });
-            cat.trail = cat.trail.filter(t => t.alpha > 0);
 
             ctx.save();
             ctx.translate(cat.x, cat.y);
@@ -718,9 +720,10 @@
 
         function drawParticles() {
             particles.forEach(p => {
-                ctx.fillStyle = p.color.replace(')', `, ${p.life})`).replace('rgb', 'rgba');
+                if (p.life <= 0) return;
+                ctx.fillStyle = p.color.replace(')', `, ${Math.max(0, p.life)})`).replace('rgb', 'rgba');
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y, Math.max(0.1, p.size * p.life), 0, Math.PI * 2);
                 ctx.fill();
             });
         }
