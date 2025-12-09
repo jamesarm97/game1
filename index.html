@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 COSMIC CAT CHAOS 🐱</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        .game-container {
+            position: relative;
+            border: 4px solid #ff00ff;
+            border-radius: 20px;
+            box-shadow:
+                0 0 20px #ff00ff,
+                0 0 40px #00ffff,
+                0 0 60px #ff00ff,
+                inset 0 0 30px rgba(255, 0, 255, 0.3);
+            animation: borderGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes borderGlow {
+            0% { box-shadow: 0 0 20px #ff00ff, 0 0 40px #00ffff, 0 0 60px #ff00ff; }
+            100% { box-shadow: 0 0 30px #00ffff, 0 0 50px #ff00ff, 0 0 70px #00ffff; }
+        }
+
+        #gameCanvas {
+            display: block;
+            border-radius: 16px;
+            cursor: none;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .score-display {
+            font-size: 28px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow:
+                0 0 10px #ff00ff,
+                0 0 20px #ff00ff,
+                0 0 30px #ff00ff;
+            animation: pulse 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
+        }
+
+        .combo-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffff00;
+            text-shadow:
+                0 0 10px #ffff00,
+                0 0 20px #ff8800;
+            opacity: 0;
+            transition: all 0.2s;
+        }
+
+        .combo-display.active {
+            opacity: 1;
+            animation: comboWiggle 0.3s ease-in-out;
+        }
+
+        @keyframes comboWiggle {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(-10deg) scale(1.2); }
+            75% { transform: rotate(10deg) scale(1.2); }
+        }
+
+        .lives-display {
+            font-size: 24px;
+        }
+
+        .title {
+            font-size: 48px;
+            color: #fff;
+            text-shadow:
+                0 0 10px #00ffff,
+                0 0 20px #ff00ff,
+                0 0 40px #00ffff;
+            margin-bottom: 20px;
+            animation: titleFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes titleFloat {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50% { transform: translateY(-10px) rotate(2deg); }
+        }
+
+        .start-screen, .game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.85);
+            border-radius: 16px;
+            z-index: 100;
+            transition: opacity 0.5s;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .start-btn, .restart-btn {
+            font-size: 28px;
+            padding: 15px 50px;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
+            transition: all 0.3s;
+            animation: btnPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes btnPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(255, 0, 255, 0.5); }
+            50% { transform: scale(1.05); box-shadow: 0 0 50px rgba(0, 255, 255, 0.8); }
+        }
+
+        .start-btn:hover, .restart-btn:hover {
+            transform: scale(1.1) !important;
+            box-shadow: 0 0 60px rgba(255, 0, 255, 0.8);
+        }
+
+        .instructions {
+            color: #aaa;
+            margin-top: 20px;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .final-score {
+            font-size: 64px;
+            color: #ffff00;
+            text-shadow: 0 0 20px #ffff00;
+            margin-bottom: 20px;
+        }
+
+        .power-up-indicator {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .power-up-indicator.active {
+            opacity: 1;
+            animation: powerUpGlow 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes powerUpGlow {
+            0% { text-shadow: 0 0 10px #00ff00; }
+            100% { text-shadow: 0 0 30px #00ff00, 0 0 50px #00ff00; }
+        }
+
+        .screen-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            border-radius: 16px;
+            opacity: 0;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="title">🚀 COSMIC CAT CHAOS 🐱</h1>
+
+    <div class="game-container" id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+        <div class="ui-overlay">
+            <div class="score-display">🌟 <span id="score">0</span></div>
+            <div class="combo-display" id="combo">COMBO x1</div>
+            <div class="lives-display" id="lives">❤️❤️❤️</div>
+        </div>
+
+        <div class="power-up-indicator" id="powerUp">⚡ SUPER SPEED! ⚡</div>
+
+        <div class="screen-flash" id="screenFlash"></div>
+
+        <div class="start-screen" id="startScreen">
+            <div class="title">🚀 COSMIC CAT CHAOS 🐱</div>
+            <button class="start-btn" id="startBtn">🎮 PLAY!</button>
+            <div class="instructions">
+                Move your mouse to fly the cosmic cat!<br>
+                🐟 Collect fish for points!<br>
+                🥒 Avoid the space cucumbers!<br>
+                ⭐ Grab power-ups for abilities!
+            </div>
+        </div>
+
+        <div class="game-over-screen hidden" id="gameOverScreen">
+            <div class="title">💥 GAME OVER 💥</div>
+            <div class="final-score" id="finalScore">0</div>
+            <button class="restart-btn" id="restartBtn">🔄 PLAY AGAIN!</button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // COSMIC CAT CHAOS - THE WACKIEST GAME EVER!
+        // ============================================
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const livesEl = document.getElementById('lives');
+        const comboEl = document.getElementById('combo');
+        const powerUpEl = document.getElementById('powerUp');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreEl = document.getElementById('finalScore');
+        const screenFlash = document.getElementById('screenFlash');
+        const gameContainer = document.getElementById('gameContainer');
+
+        // Audio Context for sound effects
+        let audioCtx = null;
+
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            switch(type) {
+                case 'collect':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(1047, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.2);
+                    break;
+                case 'hit':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.3);
+                    break;
+                case 'powerup':
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(330, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(440, audioCtx.currentTime + 0.1);
+                    osc.frequency.setValueAtTime(550, audioCtx.currentTime + 0.2);
+                    osc.frequency.setValueAtTime(660, audioCtx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+                    break;
+                case 'combo':
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.2);
+                    break;
+                case 'gameOver':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(55, audioCtx.currentTime + 1);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 1);
+                    break;
+            }
+        }
+
+        // Game State
+        let gameRunning = false;
+        let score = 0;
+        let lives = 3;
+        let combo = 0;
+        let comboTimer = 0;
+        let shakeIntensity = 0;
+        let powerUpActive = null;
+        let powerUpTimer = 0;
+        let difficulty = 1;
+        let mouseX = canvas.width / 2;
+        let mouseY = canvas.height / 2;
+
+        // Cat (Player)
+        const cat = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            size: 40,
+            angle: 0,
+            targetX: canvas.width / 2,
+            targetY: canvas.height / 2,
+            trail: [],
+            invincible: 0
+        };
+
+        // Game objects
+        let fish = [];
+        let cucumbers = [];
+        let powerUps = [];
+        let particles = [];
+        let stars = [];
+
+        // Initialize stars background
+        function initStars() {
+            stars = [];
+            for (let i = 0; i < 100; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2 + 0.5,
+                    speed: Math.random() * 2 + 0.5,
+                    twinkle: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        // Spawn functions
+        function spawnFish() {
+            const side = Math.floor(Math.random() * 4);
+            let x, y, vx, vy;
+
+            switch(side) {
+                case 0: x = -30; y = Math.random() * canvas.height; vx = 2 + Math.random() * 2; vy = (Math.random() - 0.5) * 2; break;
+                case 1: x = canvas.width + 30; y = Math.random() * canvas.height; vx = -(2 + Math.random() * 2); vy = (Math.random() - 0.5) * 2; break;
+                case 2: x = Math.random() * canvas.width; y = -30; vx = (Math.random() - 0.5) * 2; vy = 2 + Math.random() * 2; break;
+                case 3: x = Math.random() * canvas.width; y = canvas.height + 30; vx = (Math.random() - 0.5) * 2; vy = -(2 + Math.random() * 2); break;
+            }
+
+            fish.push({
+                x, y, vx, vy,
+                size: 25 + Math.random() * 15,
+                angle: Math.atan2(vy, vx),
+                wiggle: Math.random() * Math.PI * 2,
+                color: `hsl(${Math.random() * 60 + 180}, 80%, 60%)`
+            });
+        }
+
+        function spawnCucumber() {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 1.5 + Math.random() * 2 * difficulty;
+
+            cucumbers.push({
+                x: canvas.width / 2 + Math.cos(angle) * 500,
+                y: canvas.height / 2 + Math.sin(angle) * 500,
+                vx: -Math.cos(angle) * speed,
+                vy: -Math.sin(angle) * speed,
+                size: 30 + Math.random() * 20,
+                angle: angle + Math.PI,
+                spin: (Math.random() - 0.5) * 0.1
+            });
+        }
+
+        function spawnPowerUp() {
+            const types = ['speed', 'magnet', 'shield', 'multi'];
+            powerUps.push({
+                x: 100 + Math.random() * (canvas.width - 200),
+                y: 100 + Math.random() * (canvas.height - 200),
+                type: types[Math.floor(Math.random() * types.length)],
+                size: 30,
+                pulse: 0,
+                lifetime: 300
+            });
+        }
+
+        // Particle system
+        function createParticles(x, y, color, count, speed = 5) {
+            for (let i = 0; i < count; i++) {
+                const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed * (0.5 + Math.random()),
+                    vy: Math.sin(angle) * speed * (0.5 + Math.random()),
+                    size: 3 + Math.random() * 5,
+                    color,
+                    life: 1,
+                    decay: 0.02 + Math.random() * 0.02
+                });
+            }
+        }
+
+        function createTrailParticle() {
+            if (cat.trail.length > 20) cat.trail.shift();
+            cat.trail.push({
+                x: cat.x,
+                y: cat.y,
+                size: cat.size * 0.8,
+                alpha: 1
+            });
+        }
+
+        // Drawing functions
+        function drawStars() {
+            stars.forEach(star => {
+                star.twinkle += 0.05;
+                star.y += star.speed;
+                if (star.y > canvas.height) {
+                    star.y = 0;
+                    star.x = Math.random() * canvas.width;
+                }
+                const alpha = 0.5 + Math.sin(star.twinkle) * 0.5;
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawCat() {
+            // Draw trail
+            cat.trail.forEach((t, i) => {
+                t.alpha -= 0.05;
+                const hue = (Date.now() / 10 + i * 10) % 360;
+                ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${t.alpha * 0.5})`;
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, t.size * t.alpha, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            cat.trail = cat.trail.filter(t => t.alpha > 0);
+
+            ctx.save();
+            ctx.translate(cat.x, cat.y);
+            ctx.rotate(cat.angle);
+
+            // Invincibility flash
+            if (cat.invincible > 0 && Math.floor(cat.invincible / 5) % 2 === 0) {
+                ctx.globalAlpha = 0.5;
+            }
+
+            // Rocket flames
+            const flameSize = 15 + Math.sin(Date.now() / 50) * 5;
+            ctx.fillStyle = '#ff6600';
+            ctx.beginPath();
+            ctx.moveTo(-cat.size/2, -8);
+            ctx.lineTo(-cat.size/2 - flameSize, 0);
+            ctx.lineTo(-cat.size/2, 8);
+            ctx.fill();
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.moveTo(-cat.size/2, -5);
+            ctx.lineTo(-cat.size/2 - flameSize * 0.6, 0);
+            ctx.lineTo(-cat.size/2, 5);
+            ctx.fill();
+
+            // Cat body
+            ctx.fillStyle = '#ff9933';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, cat.size/2, cat.size/2.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Stripes
+            ctx.strokeStyle = '#cc6600';
+            ctx.lineWidth = 3;
+            for (let i = -2; i <= 2; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * 6, -cat.size/3);
+                ctx.lineTo(i * 6, cat.size/3);
+                ctx.stroke();
+            }
+
+            // Ears
+            ctx.fillStyle = '#ff9933';
+            ctx.beginPath();
+            ctx.moveTo(cat.size/3, -cat.size/3);
+            ctx.lineTo(cat.size/2 + 5, -cat.size/2 - 5);
+            ctx.lineTo(cat.size/2, -cat.size/4);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(cat.size/3, cat.size/3);
+            ctx.lineTo(cat.size/2 + 5, cat.size/2 + 5);
+            ctx.lineTo(cat.size/2, cat.size/4);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(cat.size/4, -6, 8, 10, 0, 0, Math.PI * 2);
+            ctx.ellipse(cat.size/4, 6, 8, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(cat.size/4 + 2, -6, 4, 0, Math.PI * 2);
+            ctx.arc(cat.size/4 + 2, 6, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Nose
+            ctx.fillStyle = '#ff6699';
+            ctx.beginPath();
+            ctx.moveTo(cat.size/2 - 2, 0);
+            ctx.lineTo(cat.size/2 - 8, -4);
+            ctx.lineTo(cat.size/2 - 8, 4);
+            ctx.fill();
+
+            // Whiskers
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1;
+            for (let i = -1; i <= 1; i++) {
+                ctx.beginPath();
+                ctx.moveTo(cat.size/3, i * 5);
+                ctx.lineTo(cat.size/2 + 15, i * 8 - 5);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(cat.size/3, i * 5);
+                ctx.lineTo(cat.size/2 + 15, i * 8 + 5);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+
+            // Power-up aura
+            if (powerUpActive) {
+                ctx.strokeStyle = powerUpActive === 'shield' ? 'rgba(0, 255, 255, 0.5)' : 'rgba(255, 255, 0, 0.5)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(cat.x, cat.y, cat.size + 10 + Math.sin(Date.now() / 100) * 5, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        function drawFish(f) {
+            ctx.save();
+            ctx.translate(f.x, f.y);
+            ctx.rotate(f.angle);
+
+            // Wiggle animation
+            f.wiggle += 0.2;
+            const wiggle = Math.sin(f.wiggle) * 0.2;
+            ctx.rotate(wiggle);
+
+            // Fish body
+            ctx.fillStyle = f.color;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, f.size/2, f.size/3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Tail
+            ctx.beginPath();
+            ctx.moveTo(-f.size/3, 0);
+            ctx.lineTo(-f.size/2 - 10, -f.size/3);
+            ctx.lineTo(-f.size/2 - 10, f.size/3);
+            ctx.fill();
+
+            // Eye
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(f.size/4, -2, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(f.size/4 + 1, -2, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Sparkle
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.beginPath();
+            const sparkleAngle = Date.now() / 200;
+            ctx.arc(Math.cos(sparkleAngle) * 10, Math.sin(sparkleAngle) * 8, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawCucumber(c) {
+            ctx.save();
+            ctx.translate(c.x, c.y);
+            ctx.rotate(c.angle);
+
+            // Cucumber body
+            const gradient = ctx.createLinearGradient(-c.size/2, 0, c.size/2, 0);
+            gradient.addColorStop(0, '#2d5a27');
+            gradient.addColorStop(0.5, '#4a8c3f');
+            gradient.addColorStop(1, '#2d5a27');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, c.size/2, c.size/4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Bumps
+            ctx.fillStyle = '#3d7a37';
+            for (let i = -3; i <= 3; i++) {
+                ctx.beginPath();
+                ctx.arc(i * (c.size/8), -c.size/6, 3, 0, Math.PI * 2);
+                ctx.arc(i * (c.size/8), c.size/6, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Evil eyes
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(c.size/4, -3, 4, 0, Math.PI * 2);
+            ctx.arc(c.size/4, 3, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(c.size/4 + 1, -3, 2, 0, Math.PI * 2);
+            ctx.arc(c.size/4 + 1, 3, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Angry eyebrows
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(c.size/4 - 5, -8);
+            ctx.lineTo(c.size/4 + 5, -6);
+            ctx.moveTo(c.size/4 - 5, 8);
+            ctx.lineTo(c.size/4 + 5, 6);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function drawPowerUp(p) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+
+            p.pulse += 0.1;
+            const scale = 1 + Math.sin(p.pulse) * 0.1;
+            ctx.scale(scale, scale);
+
+            // Glow
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size);
+            gradient.addColorStop(0, 'rgba(255, 255, 0, 0.8)');
+            gradient.addColorStop(1, 'rgba(255, 255, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, p.size * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Star shape
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * Math.PI * 2) / 5 - Math.PI / 2;
+                const outerX = Math.cos(angle) * p.size;
+                const outerY = Math.sin(angle) * p.size;
+                const innerAngle = angle + Math.PI / 5;
+                const innerX = Math.cos(innerAngle) * (p.size / 2);
+                const innerY = Math.sin(innerAngle) * (p.size / 2);
+                if (i === 0) ctx.moveTo(outerX, outerY);
+                else ctx.lineTo(outerX, outerY);
+                ctx.lineTo(innerX, innerY);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Icon
+            ctx.fillStyle = '#ff6600';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const icons = { speed: '⚡', magnet: '🧲', shield: '🛡️', multi: '✨' };
+            ctx.fillText(icons[p.type], 0, 0);
+
+            ctx.restore();
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.fillStyle = p.color.replace(')', `, ${p.life})`).replace('rgb', 'rgba');
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Update functions
+        function update() {
+            if (!gameRunning) return;
+
+            // Update difficulty
+            difficulty = 1 + score / 500;
+
+            // Decrease shake
+            if (shakeIntensity > 0) shakeIntensity *= 0.9;
+
+            // Update combo timer
+            if (comboTimer > 0) {
+                comboTimer--;
+                if (comboTimer === 0) {
+                    combo = 0;
+                    comboEl.classList.remove('active');
+                }
+            }
+
+            // Update power-up timer
+            if (powerUpTimer > 0) {
+                powerUpTimer--;
+                if (powerUpTimer === 0) {
+                    powerUpActive = null;
+                    powerUpEl.classList.remove('active');
+                }
+            }
+
+            // Update invincibility
+            if (cat.invincible > 0) cat.invincible--;
+
+            // Move cat towards mouse
+            const speed = powerUpActive === 'speed' ? 0.2 : 0.12;
+            cat.targetX = mouseX;
+            cat.targetY = mouseY;
+            cat.x += (cat.targetX - cat.x) * speed;
+            cat.y += (cat.targetY - cat.y) * speed;
+
+            // Update cat angle
+            const dx = cat.targetX - cat.x;
+            const dy = cat.targetY - cat.y;
+            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+                cat.angle = Math.atan2(dy, dx);
+            }
+
+            // Create trail particles
+            if (Math.random() < 0.5) createTrailParticle();
+
+            // Spawn objects
+            if (Math.random() < 0.03) spawnFish();
+            if (Math.random() < 0.01 * difficulty) spawnCucumber();
+            if (Math.random() < 0.003 && powerUps.length < 2) spawnPowerUp();
+
+            // Update fish
+            fish.forEach(f => {
+                if (powerUpActive === 'magnet') {
+                    const dx = cat.x - f.x;
+                    const dy = cat.y - f.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 200) {
+                        f.vx += (dx / dist) * 0.5;
+                        f.vy += (dy / dist) * 0.5;
+                    }
+                }
+                f.x += f.vx;
+                f.y += f.vy;
+                f.angle = Math.atan2(f.vy, f.vx);
+            });
+            fish = fish.filter(f => f.x > -50 && f.x < canvas.width + 50 && f.y > -50 && f.y < canvas.height + 50);
+
+            // Update cucumbers
+            cucumbers.forEach(c => {
+                c.x += c.vx;
+                c.y += c.vy;
+                c.angle += c.spin;
+            });
+            cucumbers = cucumbers.filter(c => c.x > -100 && c.x < canvas.width + 100 && c.y > -100 && c.y < canvas.height + 100);
+
+            // Update power-ups
+            powerUps.forEach(p => p.lifetime--);
+            powerUps = powerUps.filter(p => p.lifetime > 0);
+
+            // Update particles
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.98;
+                p.vy *= 0.98;
+                p.life -= p.decay;
+            });
+            particles = particles.filter(p => p.life > 0);
+
+            // Collision detection - Fish
+            fish = fish.filter(f => {
+                const dx = cat.x - f.x;
+                const dy = cat.y - f.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < cat.size/2 + f.size/2) {
+                    // Collected!
+                    combo++;
+                    comboTimer = 120;
+                    const points = 10 * (powerUpActive === 'multi' ? 2 : 1) * Math.min(combo, 10);
+                    score += points;
+                    scoreEl.textContent = score;
+
+                    comboEl.textContent = `COMBO x${Math.min(combo, 10)}!`;
+                    comboEl.classList.add('active');
+
+                    playSound('collect');
+                    if (combo > 1 && combo % 5 === 0) playSound('combo');
+
+                    createParticles(f.x, f.y, f.color, 12, 4);
+                    shakeIntensity = 3;
+
+                    return false;
+                }
+                return true;
+            });
+
+            // Collision detection - Cucumbers
+            if (cat.invincible <= 0) {
+                cucumbers.forEach(c => {
+                    const dx = cat.x - c.x;
+                    const dy = cat.y - c.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < cat.size/2 + c.size/3) {
+                        if (powerUpActive === 'shield') {
+                            powerUpActive = null;
+                            powerUpTimer = 0;
+                            powerUpEl.classList.remove('active');
+                            createParticles(cat.x, cat.y, 'rgb(0, 255, 255)', 20, 8);
+                            playSound('hit');
+                        } else {
+                            // Hit!
+                            lives--;
+                            updateLives();
+                            combo = 0;
+                            comboTimer = 0;
+                            comboEl.classList.remove('active');
+                            cat.invincible = 120;
+
+                            playSound('hit');
+                            createParticles(cat.x, cat.y, 'rgb(255, 0, 0)', 30, 8);
+                            shakeIntensity = 15;
+                            flashScreen('#ff0000');
+
+                            if (lives <= 0) {
+                                gameOver();
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Collision detection - Power-ups
+            powerUps = powerUps.filter(p => {
+                const dx = cat.x - p.x;
+                const dy = cat.y - p.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < cat.size/2 + p.size) {
+                    powerUpActive = p.type;
+                    powerUpTimer = 300;
+
+                    const labels = { speed: '⚡ SUPER SPEED! ⚡', magnet: '🧲 FISH MAGNET! 🧲', shield: '🛡️ SHIELD! 🛡️', multi: '✨ 2X POINTS! ✨' };
+                    powerUpEl.textContent = labels[p.type];
+                    powerUpEl.classList.add('active');
+
+                    playSound('powerup');
+                    createParticles(p.x, p.y, 'rgb(255, 255, 0)', 20, 6);
+                    shakeIntensity = 5;
+                    flashScreen('#ffff00');
+
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        function flashScreen(color) {
+            screenFlash.style.background = color;
+            screenFlash.style.opacity = '0.5';
+            setTimeout(() => { screenFlash.style.opacity = '0'; }, 100);
+        }
+
+        function updateLives() {
+            livesEl.textContent = '❤️'.repeat(Math.max(0, lives));
+        }
+
+        function draw() {
+            // Apply screen shake
+            ctx.save();
+            if (shakeIntensity > 0.5) {
+                ctx.translate(
+                    (Math.random() - 0.5) * shakeIntensity,
+                    (Math.random() - 0.5) * shakeIntensity
+                );
+            }
+
+            // Clear canvas with space background
+            const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width);
+            gradient.addColorStop(0, '#1a1a3a');
+            gradient.addColorStop(1, '#0a0a1a');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw everything
+            drawStars();
+            drawParticles();
+            powerUps.forEach(drawPowerUp);
+            fish.forEach(drawFish);
+            cucumbers.forEach(drawCucumber);
+            drawCat();
+
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            initAudio();
+            gameRunning = true;
+            score = 0;
+            lives = 3;
+            combo = 0;
+            comboTimer = 0;
+            difficulty = 1;
+            powerUpActive = null;
+            powerUpTimer = 0;
+            cat.x = canvas.width / 2;
+            cat.y = canvas.height / 2;
+            cat.invincible = 60;
+            fish = [];
+            cucumbers = [];
+            powerUps = [];
+            particles = [];
+
+            scoreEl.textContent = '0';
+            updateLives();
+            comboEl.classList.remove('active');
+            powerUpEl.classList.remove('active');
+
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+
+            initStars();
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            playSound('gameOver');
+            finalScoreEl.textContent = score;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        // Event listeners
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.touches[0].clientX - rect.left;
+            mouseY = e.touches[0].clientY - rect.top;
+        });
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+
+        // Initialize and start
+        initStars();
+        gameLoop();
+    </script>
+</body>
+</html>
