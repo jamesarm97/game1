@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frozen Haven - Survive the Whiteout</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: linear-gradient(180deg, #87CEEB 0%, #E8F4F8 50%, #FFFFFF 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        .game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .title {
+            font-size: 36px;
+            color: #2c5aa0;
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.8), 0 0 20px rgba(100,150,255,0.5);
+            margin-bottom: 5px;
+        }
+
+        .game-container {
+            position: relative;
+            border: 4px solid #5a9fd4;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(100, 180, 255, 0.4), inset 0 0 50px rgba(255,255,255,0.3);
+            background: #c8e0f0;
+        }
+
+        #gameCanvas {
+            display: block;
+            border-radius: 11px;
+        }
+
+        .ui-top {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .resources {
+            display: flex;
+            gap: 15px;
+            background: rgba(44, 90, 160, 0.85);
+            padding: 8px 15px;
+            border-radius: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            pointer-events: auto;
+        }
+
+        .resource {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .resource-icon {
+            font-size: 18px;
+        }
+
+        .temp-display {
+            background: linear-gradient(180deg, #1e88e5, #0d47a1);
+            padding: 8px 15px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .temp-display.cold {
+            background: linear-gradient(180deg, #0d47a1, #1a237e);
+            animation: tempPulse 1s ease-in-out infinite;
+        }
+
+        .temp-display.danger {
+            background: linear-gradient(180deg, #6a1b9a, #4a148c);
+            animation: tempPulse 0.5s ease-in-out infinite;
+        }
+
+        @keyframes tempPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .ui-bottom {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .survivors-panel {
+            background: rgba(44, 90, 160, 0.9);
+            padding: 10px;
+            border-radius: 10px;
+            pointer-events: auto;
+            max-width: 300px;
+        }
+
+        .survivors-title {
+            color: #7dd3fc;
+            font-size: 12px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .survivor-list {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .survivor {
+            width: 50px;
+            height: 60px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .survivor:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+
+        .survivor.selected {
+            border-color: #fbbf24;
+            background: rgba(251, 191, 36, 0.2);
+        }
+
+        .survivor.working {
+            border-color: #22c55e;
+        }
+
+        .survivor-avatar {
+            font-size: 24px;
+        }
+
+        .survivor-name {
+            color: white;
+            font-size: 10px;
+            margin-top: 2px;
+        }
+
+        .survivor-status {
+            color: #9ca3af;
+            font-size: 8px;
+        }
+
+        .buildings-panel {
+            background: rgba(44, 90, 160, 0.9);
+            padding: 10px;
+            border-radius: 10px;
+            pointer-events: auto;
+        }
+
+        .buildings-title {
+            color: #7dd3fc;
+            font-size: 12px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .building-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .build-btn {
+            padding: 8px 12px;
+            background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .build-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
+        }
+
+        .build-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .build-btn .icon {
+            font-size: 20px;
+        }
+
+        .build-btn .cost {
+            font-size: 9px;
+            color: #bfdbfe;
+        }
+
+        .action-panel {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+            z-index: 10;
+        }
+
+        .action-btn {
+            padding: 12px 20px;
+            background: linear-gradient(180deg, #22c55e, #16a34a);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.6);
+        }
+
+        .action-btn.danger {
+            background: linear-gradient(180deg, #ef4444, #dc2626);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .start-screen, .game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(30, 58, 95, 0.95);
+            border-radius: 11px;
+            z-index: 100;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .screen-title {
+            font-size: 42px;
+            color: #7dd3fc;
+            text-shadow: 0 0 20px rgba(125, 211, 252, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .screen-subtitle {
+            font-size: 18px;
+            color: #94a3b8;
+            margin-bottom: 30px;
+        }
+
+        .start-btn {
+            padding: 15px 50px;
+            font-size: 24px;
+            background: linear-gradient(180deg, #f97316, #ea580c);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(249, 115, 22, 0.5);
+            transition: all 0.3s;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 40px rgba(249, 115, 22, 0.7);
+        }
+
+        .instructions {
+            color: #94a3b8;
+            margin-top: 25px;
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .final-stats {
+            color: white;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .notification {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(34, 197, 94, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .notification.show {
+            opacity: 1;
+        }
+
+        .notification.warning {
+            background: rgba(234, 179, 8, 0.9);
+        }
+
+        .notification.danger {
+            background: rgba(239, 68, 68, 0.9);
+        }
+
+        .day-display {
+            background: rgba(44, 90, 160, 0.85);
+            padding: 8px 15px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .time-icon {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <h1 class="title">❄️ Frozen Haven ❄️</h1>
+
+        <div class="game-container">
+            <canvas id="gameCanvas" width="900" height="600"></canvas>
+
+            <div class="ui-top">
+                <div class="resources">
+                    <div class="resource">
+                        <span class="resource-icon">🪵</span>
+                        <span id="woodCount">50</span>
+                    </div>
+                    <div class="resource">
+                        <span class="resource-icon">🍖</span>
+                        <span id="foodCount">30</span>
+                    </div>
+                    <div class="resource">
+                        <span class="resource-icon">🪨</span>
+                        <span id="stoneCount">20</span>
+                    </div>
+                    <div class="resource">
+                        <span class="resource-icon">👥</span>
+                        <span id="popCount">3</span>/<span id="popMax">5</span>
+                    </div>
+                </div>
+
+                <div class="day-display">
+                    <span class="time-icon">☀️</span>
+                    Day <span id="dayCount">1</span>
+                </div>
+
+                <div class="temp-display" id="tempDisplay">
+                    <span>🌡️</span>
+                    <span id="temperature">-20</span>°F
+                </div>
+            </div>
+
+            <div class="notification" id="notification"></div>
+
+            <div class="ui-bottom">
+                <div class="survivors-panel">
+                    <div class="survivors-title">Survivors</div>
+                    <div class="survivor-list" id="survivorList"></div>
+                </div>
+
+                <div class="buildings-panel">
+                    <div class="buildings-title">Build</div>
+                    <div class="building-buttons">
+                        <button class="build-btn" onclick="buildStructure('tent')" id="btnTent">
+                            <span class="icon">⛺</span>
+                            <span>Tent</span>
+                            <span class="cost">🪵20 🪨10</span>
+                        </button>
+                        <button class="build-btn" onclick="buildStructure('storage')" id="btnStorage">
+                            <span class="icon">📦</span>
+                            <span>Storage</span>
+                            <span class="cost">🪵30 🪨20</span>
+                        </button>
+                        <button class="build-btn" onclick="buildStructure('workshop')" id="btnWorkshop">
+                            <span class="icon">🔨</span>
+                            <span>Workshop</span>
+                            <span class="cost">🪵50 🪨30</span>
+                        </button>
+                        <button class="build-btn" onclick="addFuel()" id="btnFuel">
+                            <span class="icon">🔥</span>
+                            <span>Add Fuel</span>
+                            <span class="cost">🪵10</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="start-screen" id="startScreen">
+                <div class="screen-title">❄️ Frozen Haven ❄️</div>
+                <div class="screen-subtitle">Survive the Endless Winter</div>
+                <button class="start-btn" onclick="startGame()">▶ BEGIN SURVIVAL</button>
+                <div class="instructions">
+                    🔥 Keep the fire burning to stay warm<br>
+                    🪵 Click on the map to gather resources<br>
+                    👥 Assign survivors to gather automatically<br>
+                    🏠 Build structures to shelter more survivors<br>
+                    ❄️ Survive as many days as possible!
+                </div>
+            </div>
+
+            <div class="game-over-screen hidden" id="gameOverScreen">
+                <div class="screen-title">💀 Frozen Over 💀</div>
+                <div class="final-stats" id="finalStats">You survived 0 days</div>
+                <button class="start-btn" onclick="startGame()">🔄 Try Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Audio
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            switch(type) {
+                case 'collect':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.15);
+                    break;
+                case 'build':
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(330, audioCtx.currentTime + 0.1);
+                    osc.frequency.setValueAtTime(440, audioCtx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.3);
+                    break;
+                case 'warning':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(150, audioCtx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.3);
+                    break;
+                case 'fire':
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.25);
+                    break;
+                case 'newDay':
+                    osc.type = 'sine';
+                    [330, 440, 550, 660].forEach((freq, i) => {
+                        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.1);
+                    });
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.5);
+                    break;
+            }
+        }
+
+        // Game State
+        let gameRunning = false;
+        let day = 1;
+        let dayTimer = 0;
+        const DAY_LENGTH = 1800; // frames per day
+
+        let resources = { wood: 50, food: 30, stone: 20 };
+        let temperature = -20;
+        let fireStrength = 100;
+        let fireRadius = 150;
+
+        let survivors = [];
+        let buildings = [];
+        let resourceNodes = [];
+        let snowflakes = [];
+        let particles = [];
+        let floatingTexts = [];
+
+        // Fire position (center of camp)
+        const firePos = { x: 450, y: 320 };
+
+        // Survivor names
+        const NAMES = ['Andy', 'Sean', 'Annie', 'Max', 'Luna', 'Jack', 'Emma', 'Noah', 'Mia', 'Leo'];
+        const AVATARS = ['🧔', '👨', '👩', '🧑', '👱‍♀️', '🧑‍🦰', '👩‍🦳', '🧔‍♂️', '👨‍🦱', '👩‍🦰'];
+
+        function initGame() {
+            survivors = [
+                { id: 0, name: 'Andy', avatar: '🧔', task: null, targetNode: null, x: firePos.x - 30, y: firePos.y + 20 },
+                { id: 1, name: 'Sean', avatar: '👨', task: null, targetNode: null, x: firePos.x + 30, y: firePos.y + 20 },
+                { id: 2, name: 'Annie', avatar: '👩', task: null, targetNode: null, x: firePos.x, y: firePos.y + 40 }
+            ];
+
+            buildings = [
+                { type: 'fire', x: firePos.x, y: firePos.y, size: 40 }
+            ];
+
+            resourceNodes = [];
+            spawnResourceNodes();
+            initSnowflakes();
+        }
+
+        function spawnResourceNodes() {
+            // Spawn resource nodes around the map
+            const types = ['wood', 'wood', 'wood', 'stone', 'stone', 'food'];
+            for (let i = 0; i < 15; i++) {
+                let x, y, attempts = 0;
+                do {
+                    x = 50 + Math.random() * (canvas.width - 100);
+                    y = 80 + Math.random() * (canvas.height - 180);
+                    attempts++;
+                } while (distTo(x, y, firePos.x, firePos.y) < 120 && attempts < 20);
+
+                resourceNodes.push({
+                    id: i,
+                    type: types[Math.floor(Math.random() * types.length)],
+                    x, y,
+                    amount: 20 + Math.floor(Math.random() * 30),
+                    maxAmount: 50
+                });
+            }
+        }
+
+        function initSnowflakes() {
+            snowflakes = [];
+            for (let i = 0; i < 150; i++) {
+                snowflakes.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: 1 + Math.random() * 3,
+                    speed: 0.5 + Math.random() * 1.5,
+                    wobble: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        function distTo(x1, y1, x2, y2) {
+            return Math.sqrt((x2-x1)**2 + (y2-y1)**2);
+        }
+
+        // Drawing functions
+        function drawBackground() {
+            // Sky gradient
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            const timeOfDay = (dayTimer / DAY_LENGTH);
+
+            if (timeOfDay < 0.25 || timeOfDay > 0.75) {
+                // Night
+                skyGrad.addColorStop(0, '#1a1a2e');
+                skyGrad.addColorStop(1, '#16213e');
+            } else {
+                // Day
+                skyGrad.addColorStop(0, '#87CEEB');
+                skyGrad.addColorStop(0.7, '#E0F0FF');
+                skyGrad.addColorStop(1, '#FFFFFF');
+            }
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Ground (snow)
+            ctx.fillStyle = '#F0F8FF';
+            ctx.fillRect(0, canvas.height * 0.4, canvas.width, canvas.height * 0.6);
+
+            // Snow drifts
+            ctx.fillStyle = '#E8F4FC';
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.ellipse(
+                    150 + i * 200,
+                    canvas.height * 0.45 + Math.sin(i) * 20,
+                    80 + i * 10,
+                    30,
+                    0, 0, Math.PI * 2
+                );
+                ctx.fill();
+            }
+        }
+
+        function drawWarmZone() {
+            // Draw the warm zone around the fire
+            const radius = fireRadius * (fireStrength / 100);
+            const gradient = ctx.createRadialGradient(
+                firePos.x, firePos.y, 0,
+                firePos.x, firePos.y, radius
+            );
+            gradient.addColorStop(0, 'rgba(255, 200, 150, 0.15)');
+            gradient.addColorStop(0.5, 'rgba(255, 180, 130, 0.08)');
+            gradient.addColorStop(1, 'rgba(255, 150, 100, 0)');
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(firePos.x, firePos.y, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Warm zone border
+            ctx.strokeStyle = 'rgba(255, 150, 100, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(firePos.x, firePos.y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function drawFire() {
+            const intensity = fireStrength / 100;
+            const baseSize = 25 * intensity + 15;
+
+            // Glow
+            const glowGrad = ctx.createRadialGradient(
+                firePos.x, firePos.y - 10, 0,
+                firePos.x, firePos.y - 10, baseSize * 2
+            );
+            glowGrad.addColorStop(0, `rgba(255, 150, 50, ${0.4 * intensity})`);
+            glowGrad.addColorStop(1, 'rgba(255, 100, 0, 0)');
+            ctx.fillStyle = glowGrad;
+            ctx.beginPath();
+            ctx.arc(firePos.x, firePos.y - 10, baseSize * 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Fire pit (stones)
+            ctx.fillStyle = '#5a5a5a';
+            ctx.beginPath();
+            ctx.ellipse(firePos.x, firePos.y + 10, 35, 15, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Flames
+            const time = Date.now() / 100;
+            for (let i = 0; i < 5; i++) {
+                const flameHeight = baseSize * (0.7 + Math.sin(time + i) * 0.3);
+                const offsetX = Math.sin(time * 2 + i * 1.5) * 8;
+
+                ctx.fillStyle = i < 2 ? '#ff6600' : (i < 4 ? '#ff9900' : '#ffcc00');
+                ctx.beginPath();
+                ctx.moveTo(firePos.x + offsetX - 10 + i * 5, firePos.y + 5);
+                ctx.quadraticCurveTo(
+                    firePos.x + offsetX - 5 + i * 3,
+                    firePos.y - flameHeight,
+                    firePos.x + offsetX + 10 - i * 5,
+                    firePos.y + 5
+                );
+                ctx.fill();
+            }
+
+            // Sparks
+            if (Math.random() < 0.3 * intensity) {
+                particles.push({
+                    x: firePos.x + (Math.random() - 0.5) * 20,
+                    y: firePos.y - 20,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: -1 - Math.random() * 2,
+                    life: 1,
+                    color: Math.random() > 0.5 ? '#ffcc00' : '#ff6600',
+                    size: 2 + Math.random() * 2
+                });
+            }
+        }
+
+        function drawResourceNodes() {
+            resourceNodes.forEach(node => {
+                if (node.amount <= 0) return;
+
+                const icons = { wood: '🌲', stone: '🪨', food: '🫐' };
+                const sizes = { wood: 30, stone: 25, food: 22 };
+
+                ctx.font = `${sizes[node.type]}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(icons[node.type], node.x, node.y);
+
+                // Amount indicator
+                const pct = node.amount / node.maxAmount;
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(node.x - 15, node.y + 18, 30, 4);
+                ctx.fillStyle = pct > 0.5 ? '#22c55e' : (pct > 0.25 ? '#eab308' : '#ef4444');
+                ctx.fillRect(node.x - 15, node.y + 18, 30 * pct, 4);
+            });
+        }
+
+        function drawBuildings() {
+            buildings.forEach(b => {
+                if (b.type === 'fire') return; // Fire drawn separately
+
+                ctx.font = '40px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                const icons = { tent: '⛺', storage: '📦', workshop: '🏚️' };
+                ctx.fillText(icons[b.type] || '🏠', b.x, b.y);
+            });
+        }
+
+        function drawSurvivors() {
+            survivors.forEach(s => {
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath();
+                ctx.ellipse(s.x, s.y + 15, 12, 5, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Avatar
+                ctx.font = '28px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(s.avatar, s.x, s.y);
+
+                // Task indicator
+                if (s.task) {
+                    const taskIcons = { wood: '🪓', stone: '⛏️', food: '🧺' };
+                    ctx.font = '14px Arial';
+                    ctx.fillText(taskIcons[s.task] || '❓', s.x + 12, s.y - 12);
+                }
+
+                // Cold indicator (if outside warm zone)
+                const distToFire = distTo(s.x, s.y, firePos.x, firePos.y);
+                if (distToFire > fireRadius * (fireStrength / 100)) {
+                    ctx.font = '12px Arial';
+                    ctx.fillText('🥶', s.x - 12, s.y - 12);
+                }
+            });
+        }
+
+        function drawSnowflakes() {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            snowflakes.forEach(s => {
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = Math.max(0, p.life);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, Math.max(0.1, p.size * p.life), 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        function drawFloatingTexts() {
+            floatingTexts.forEach(ft => {
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = ft.color;
+                ctx.globalAlpha = Math.max(0, ft.life);
+                ctx.fillText(ft.text, ft.x, ft.y);
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        function drawTrees() {
+            // Background trees
+            const treePositions = [
+                {x: 50, y: 200}, {x: 120, y: 180}, {x: 800, y: 190},
+                {x: 850, y: 210}, {x: 30, y: 350}, {x: 870, y: 340}
+            ];
+
+            ctx.font = '50px Arial';
+            ctx.textAlign = 'center';
+            treePositions.forEach(t => {
+                ctx.fillText('🌲', t.x, t.y);
+            });
+        }
+
+        // Update functions
+        function update() {
+            if (!gameRunning) return;
+
+            dayTimer++;
+            if (dayTimer >= DAY_LENGTH) {
+                dayTimer = 0;
+                day++;
+                document.getElementById('dayCount').textContent = day;
+                playSound('newDay');
+                showNotification(`Day ${day} begins!`, 'info');
+
+                // Consume food
+                const foodNeeded = survivors.length;
+                if (resources.food >= foodNeeded) {
+                    resources.food -= foodNeeded;
+                } else {
+                    showNotification('Not enough food! Survivors are hungry!', 'danger');
+                    // Chance to lose a survivor
+                    if (Math.random() < 0.3 && survivors.length > 1) {
+                        const lost = survivors.pop();
+                        showNotification(`${lost.name} left due to hunger!`, 'danger');
+                    }
+                }
+
+                // Chance to find new survivor
+                if (Math.random() < 0.2 && survivors.length < getMaxPop()) {
+                    const newSurvivor = {
+                        id: survivors.length,
+                        name: NAMES[survivors.length % NAMES.length],
+                        avatar: AVATARS[survivors.length % AVATARS.length],
+                        task: null,
+                        targetNode: null,
+                        x: firePos.x + (Math.random() - 0.5) * 60,
+                        y: firePos.y + 30 + Math.random() * 30
+                    };
+                    survivors.push(newSurvivor);
+                    showNotification(`${newSurvivor.name} joined your camp!`, 'info');
+                }
+
+                // Respawn some resources
+                if (Math.random() < 0.5) {
+                    const depleted = resourceNodes.filter(n => n.amount <= 0);
+                    if (depleted.length > 0) {
+                        const node = depleted[Math.floor(Math.random() * depleted.length)];
+                        node.amount = 15 + Math.floor(Math.random() * 20);
+                    }
+                }
+            }
+
+            // Update fire
+            fireStrength = Math.max(0, fireStrength - 0.02);
+            if (fireStrength < 30) {
+                playSound('warning');
+            }
+
+            // Update temperature based on fire
+            const targetTemp = -60 + (fireStrength * 0.5);
+            temperature += (targetTemp - temperature) * 0.01;
+
+            // Game over if fire dies
+            if (fireStrength <= 0) {
+                gameOver();
+                return;
+            }
+
+            // Update survivors
+            survivors.forEach(s => {
+                if (s.task && s.targetNode !== null) {
+                    const node = resourceNodes.find(n => n.id === s.targetNode);
+                    if (node && node.amount > 0) {
+                        // Move towards node
+                        const dx = node.x - s.x;
+                        const dy = node.y - s.y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+
+                        if (dist > 20) {
+                            s.x += (dx / dist) * 1.5;
+                            s.y += (dy / dist) * 1.5;
+                        } else {
+                            // Gather
+                            if (Math.random() < 0.02) {
+                                const amount = 1 + Math.floor(Math.random() * 2);
+                                node.amount -= amount;
+                                resources[s.task] += amount;
+
+                                floatingTexts.push({
+                                    x: node.x,
+                                    y: node.y - 20,
+                                    text: `+${amount}`,
+                                    color: '#22c55e',
+                                    life: 1,
+                                    vy: -1
+                                });
+                            }
+                        }
+                    } else {
+                        // Find new node
+                        const newNode = findNearestResource(s.task);
+                        if (newNode) {
+                            s.targetNode = newNode.id;
+                        } else {
+                            s.task = null;
+                            s.targetNode = null;
+                        }
+                    }
+                } else if (!s.task) {
+                    // Return to fire
+                    const dx = firePos.x + (Math.random() - 0.5) * 40 - s.x;
+                    const dy = firePos.y + 20 - s.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist > 30) {
+                        s.x += (dx / dist) * 1;
+                        s.y += (dy / dist) * 1;
+                    }
+                }
+            });
+
+            // Update snowflakes
+            snowflakes.forEach(s => {
+                s.y += s.speed;
+                s.x += Math.sin(s.wobble) * 0.5;
+                s.wobble += 0.02;
+
+                if (s.y > canvas.height) {
+                    s.y = -5;
+                    s.x = Math.random() * canvas.width;
+                }
+            });
+
+            // Update particles
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.02;
+            });
+            particles = particles.filter(p => p.life > 0);
+
+            // Update floating texts
+            floatingTexts.forEach(ft => {
+                ft.y += ft.vy;
+                ft.life -= 0.02;
+            });
+            floatingTexts = floatingTexts.filter(ft => ft.life > 0);
+
+            // Update UI
+            updateUI();
+        }
+
+        function findNearestResource(type) {
+            const available = resourceNodes.filter(n => n.type === type && n.amount > 0);
+            if (available.length === 0) return null;
+
+            available.sort((a, b) => {
+                const distA = distTo(a.x, a.y, firePos.x, firePos.y);
+                const distB = distTo(b.x, b.y, firePos.x, firePos.y);
+                return distA - distB;
+            });
+
+            return available[0];
+        }
+
+        function getMaxPop() {
+            let max = 3;
+            buildings.forEach(b => {
+                if (b.type === 'tent') max += 2;
+            });
+            return max;
+        }
+
+        function updateUI() {
+            document.getElementById('woodCount').textContent = Math.floor(resources.wood);
+            document.getElementById('foodCount').textContent = Math.floor(resources.food);
+            document.getElementById('stoneCount').textContent = Math.floor(resources.stone);
+            document.getElementById('popCount').textContent = survivors.length;
+            document.getElementById('popMax').textContent = getMaxPop();
+            document.getElementById('temperature').textContent = Math.floor(temperature);
+
+            // Temperature display color
+            const tempDisplay = document.getElementById('tempDisplay');
+            tempDisplay.classList.remove('cold', 'danger');
+            if (temperature < -40) {
+                tempDisplay.classList.add('danger');
+            } else if (temperature < -30) {
+                tempDisplay.classList.add('cold');
+            }
+
+            // Update survivor list
+            renderSurvivorList();
+
+            // Update build buttons
+            document.getElementById('btnTent').disabled = resources.wood < 20 || resources.stone < 10;
+            document.getElementById('btnStorage').disabled = resources.wood < 30 || resources.stone < 20;
+            document.getElementById('btnWorkshop').disabled = resources.wood < 50 || resources.stone < 30;
+            document.getElementById('btnFuel').disabled = resources.wood < 10;
+        }
+
+        let selectedSurvivor = null;
+
+        function renderSurvivorList() {
+            const list = document.getElementById('survivorList');
+            list.innerHTML = '';
+
+            survivors.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'survivor' + (selectedSurvivor === s.id ? ' selected' : '') + (s.task ? ' working' : '');
+                div.innerHTML = `
+                    <span class="survivor-avatar">${s.avatar}</span>
+                    <span class="survivor-name">${s.name}</span>
+                    <span class="survivor-status">${s.task ? '⚒️' + s.task : 'Idle'}</span>
+                `;
+                div.onclick = () => selectSurvivor(s.id);
+                list.appendChild(div);
+            });
+        }
+
+        function selectSurvivor(id) {
+            if (selectedSurvivor === id) {
+                selectedSurvivor = null;
+            } else {
+                selectedSurvivor = id;
+            }
+            renderSurvivorList();
+        }
+
+        function draw() {
+            drawBackground();
+            drawTrees();
+            drawWarmZone();
+            drawResourceNodes();
+            drawBuildings();
+            drawFire();
+            drawSurvivors();
+            drawParticles();
+            drawFloatingTexts();
+            drawSnowflakes();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Game actions
+        function buildStructure(type) {
+            const costs = {
+                tent: { wood: 20, stone: 10 },
+                storage: { wood: 30, stone: 20 },
+                workshop: { wood: 50, stone: 30 }
+            };
+
+            const cost = costs[type];
+            if (resources.wood >= cost.wood && resources.stone >= cost.stone) {
+                resources.wood -= cost.wood;
+                resources.stone -= cost.stone;
+
+                // Place building near fire
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 80 + Math.random() * 40;
+                buildings.push({
+                    type,
+                    x: firePos.x + Math.cos(angle) * dist,
+                    y: firePos.y + Math.sin(angle) * dist * 0.5 + 20,
+                    size: 40
+                });
+
+                playSound('build');
+                showNotification(`${type.charAt(0).toUpperCase() + type.slice(1)} built!`, 'info');
+            }
+        }
+
+        function addFuel() {
+            if (resources.wood >= 10) {
+                resources.wood -= 10;
+                fireStrength = Math.min(100, fireStrength + 25);
+                playSound('fire');
+                showNotification('Fire stoked! +25 warmth', 'info');
+
+                // Sparks effect
+                for (let i = 0; i < 10; i++) {
+                    particles.push({
+                        x: firePos.x + (Math.random() - 0.5) * 30,
+                        y: firePos.y - 10,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: -2 - Math.random() * 3,
+                        life: 1,
+                        color: '#ffcc00',
+                        size: 3 + Math.random() * 3
+                    });
+                }
+            }
+        }
+
+        function showNotification(text, type = 'info') {
+            const notif = document.getElementById('notification');
+            notif.textContent = text;
+            notif.className = 'notification show';
+            if (type === 'warning') notif.classList.add('warning');
+            if (type === 'danger') notif.classList.add('danger');
+
+            setTimeout(() => {
+                notif.classList.remove('show');
+            }, 2000);
+        }
+
+        // Canvas click handler
+        canvas.addEventListener('click', (e) => {
+            if (!gameRunning) return;
+            initAudio();
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Check if clicked on a resource node
+            for (const node of resourceNodes) {
+                if (node.amount > 0 && distTo(x, y, node.x, node.y) < 25) {
+                    if (selectedSurvivor !== null) {
+                        // Assign survivor to this resource
+                        const survivor = survivors.find(s => s.id === selectedSurvivor);
+                        if (survivor) {
+                            survivor.task = node.type;
+                            survivor.targetNode = node.id;
+                            showNotification(`${survivor.name} assigned to gather ${node.type}`, 'info');
+                            selectedSurvivor = null;
+                            renderSurvivorList();
+                        }
+                    } else {
+                        // Manual gather
+                        const amount = 2 + Math.floor(Math.random() * 3);
+                        node.amount -= amount;
+                        resources[node.type] += amount;
+
+                        playSound('collect');
+                        floatingTexts.push({
+                            x: node.x,
+                            y: node.y - 20,
+                            text: `+${amount} ${node.type === 'wood' ? '🪵' : node.type === 'stone' ? '🪨' : '🍖'}`,
+                            color: '#22c55e',
+                            life: 1,
+                            vy: -1
+                        });
+                    }
+                    return;
+                }
+            }
+
+            // Check if clicked on fire
+            if (distTo(x, y, firePos.x, firePos.y) < 40) {
+                if (selectedSurvivor !== null) {
+                    // Cancel survivor task
+                    const survivor = survivors.find(s => s.id === selectedSurvivor);
+                    if (survivor) {
+                        survivor.task = null;
+                        survivor.targetNode = null;
+                        showNotification(`${survivor.name} returns to camp`, 'info');
+                        selectedSurvivor = null;
+                        renderSurvivorList();
+                    }
+                }
+            }
+        });
+
+        function startGame() {
+            initAudio();
+            gameRunning = true;
+            day = 1;
+            dayTimer = 0;
+            resources = { wood: 50, food: 30, stone: 20 };
+            temperature = -20;
+            fireStrength = 100;
+            particles = [];
+            floatingTexts = [];
+            selectedSurvivor = null;
+
+            initGame();
+            updateUI();
+
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('dayCount').textContent = '1';
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            playSound('warning');
+            document.getElementById('finalStats').textContent = `You survived ${day} days with ${survivors.length} survivors`;
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+        }
+
+        // Initialize
+        initSnowflakes();
+        gameLoop();
+    </script>
+</body>
+</html>
