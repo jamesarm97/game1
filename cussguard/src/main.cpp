@@ -1,37 +1,24 @@
-#include <Arduino.h>
+#include <M5Dial.h>
 #include <LittleFS.h>
-#include <ESP32Encoder.h>
 #include "config.h"
 #include "app.h"
 #include "ir.h"
 #include "playback.h"
-#include "oled.h"
+#include "screen.h"
 #include "webui.h"
 
-ESP32Encoder encoder;
-int64_t g_lastEnc = 0;
-
+long     g_lastEnc = 0;      // last raw encoder count
+int32_t  g_encAccum = 0;     // leftover counts toward the next nudge step
+uint32_t g_pressStart = 0;   // dial-button press timestamp
 uint32_t g_lastRender = 0;
 
-// Simple active-low debounce helper.
-struct Button {
-  uint8_t pin; bool last = true; uint32_t tLast = 0;
-  void begin(uint8_t p) { pin = p; pinMode(p, INPUT_PULLUP); }
-  bool pressed() {
-    bool s = digitalRead(pin);
-    uint32_t now = millis();
-    if (s != last && now - tLast > 30) {
-      tLast = now; last = s;
-      if (s == LOW) return true;   // falling edge = press
-    }
-    return false;
-  }
-};
-Button btnMinus, btnPlus, btnEnc;
-
 void setup() {
+  auto cfg = M5.config();
+  // enableEncoder = true, enableRFID = false
+  M5Dial.begin(cfg, true, false);
+
   Serial.begin(115200);
-  delay(200);
+  delay(150);
 
   if (!LittleFS.begin(true)) {
     Serial.println("LittleFS mount failed");
@@ -39,18 +26,10 @@ void setup() {
 
   ir::begin();
   app::begin();
-  oled::begin();
+  screen::begin();
   webui::begin();
 
-  // KY-040 breakout boards include their own pull-ups, so we don't touch the
-  // library's internal-pull setting (its enum name differs across versions).
-  encoder.attachHalfQuad(PIN_ENC_A, PIN_ENC_B);
-  encoder.clearCount();
-  g_lastEnc = 0;
-
-  btnMinus.begin(PIN_BTN_MINUS);
-  btnPlus.begin(PIN_BTN_PLUS);
-  btnEnc.begin(PIN_ENC_SW);
+  g_lastEnc = M5Dial.Encoder.read();
 
   Serial.print("AP up. Join \"");
   Serial.print(AP_SSID);
@@ -58,23 +37,30 @@ void setup() {
 }
 
 void loop() {
+  M5Dial.update();     // refresh encoder + button state
   ir::poll();          // capture IR while learning
   playback::tick();    // drive mute/unmute
 
-  // Rotary encoder -> scrub timing offset (one detent per NUDGE_STEP_MS).
-  int64_t enc = encoder.getCount() / 2;   // half-quad -> detents
+  // ── Rotary dial -> scrub the timing offset ──
+  long enc = M5Dial.Encoder.read();
   if (enc != g_lastEnc) {
-    int32_t delta = (int32_t)(enc - g_lastEnc);
+    g_encAccum += (int32_t)(enc - g_lastEnc);
     g_lastEnc = enc;
-    playback::nudge(delta * NUDGE_STEP_MS);
+    while (g_encAccum >= ENC_COUNTS_PER_STEP)  { playback::nudge(+NUDGE_STEP_MS); g_encAccum -= ENC_COUNTS_PER_STEP; }
+    while (g_encAccum <= -ENC_COUNTS_PER_STEP) { playback::nudge(-NUDGE_STEP_MS); g_encAccum += ENC_COUNTS_PER_STEP; }
   }
 
-  // Encoder push = play/pause (fast commercial pause).
-  if (btnEnc.pressed()) playback::toggle();
-  if (btnMinus.pressed()) playback::nudge(-NUDGE_STEP_MS);
-  if (btnPlus.pressed())  playback::nudge(+NUDGE_STEP_MS);
+  // ── Dial push button: short press = play/pause, long press = stop ──
+  if (M5Dial.BtnA.wasPressed()) g_pressStart = millis();
+  if (M5Dial.BtnA.wasReleased()) {
+    uint32_t held = millis() - g_pressStart;
+    bool longPress = held >= LONGPRESS_MS;
+    if (longPress) playback::stop();
+    else           playback::toggle();
+    M5.Speaker.tone(longPress ? 600 : 900, 40);  // click feedback
+  }
 
-  // Refresh display ~8 Hz.
+  // ── Refresh the round display ~8 Hz ──
   uint32_t now = millis();
-  if (now - g_lastRender > 120) { g_lastRender = now; oled::render(); }
+  if (now - g_lastRender > 120) { g_lastRender = now; screen::render(); }
 }

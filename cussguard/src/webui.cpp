@@ -4,7 +4,7 @@
 #include "playback.h"
 #include "ir.h"
 #include "profanity.h"
-#include "oled.h"
+#include "screen.h"
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
@@ -62,7 +62,7 @@ void begin() {
   server.on("/api/learn", HTTP_POST, [](AsyncWebServerRequest* r) {
     String name = paramStr(r, "name", "");
     if (name == "cancel") ir::cancelLearn();
-    else if (name.length()) { ir::beginLearn(name); oled::toast("Point remote, press key"); }
+    else if (name.length()) { ir::beginLearn(name); screen::toast("Point remote, press key"); }
     ok(r);
   });
   server.on("/api/mute", HTTP_POST, [](AsyncWebServerRequest* r) {
