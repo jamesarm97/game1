@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CussGuard</title>
+<style>
+  :root { --bg:#0f1220; --card:#1a1f36; --fg:#e8ecf5; --dim:#8b93b0; --accent:#5b8cff; --bad:#ff5b6e; --good:#39d98a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--fg); }
+  header { padding:14px 16px; background:linear-gradient(90deg,#1a1f36,#232a4d); position:sticky; top:0; }
+  h1 { margin:0; font-size:18px; letter-spacing:.5px; }
+  h1 span { color:var(--accent); }
+  main { max-width:640px; margin:0 auto; padding:12px 12px 40px; }
+  .card { background:var(--card); border-radius:14px; padding:14px; margin:12px 0; box-shadow:0 4px 14px rgba(0,0,0,.25); }
+  .clock { font-size:44px; font-weight:700; font-variant-numeric:tabular-nums; text-align:center; }
+  .sub { text-align:center; color:var(--dim); font-size:13px; margin-top:2px; }
+  .pill { display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; }
+  .pill.play{background:var(--good);color:#04231a}.pill.pause{background:#ffcf5b;color:#332600}.pill.stop{background:#414a70}
+  .mute { color:var(--bad); font-weight:700; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  button { border:0; border-radius:10px; padding:12px 14px; font-size:15px; font-weight:600; color:#fff; background:#2c355e; cursor:pointer; }
+  button:active { transform:translateY(1px); }
+  button.primary{background:var(--accent);} button.warn{background:var(--bad);} button.ghost{background:#242c4d;color:var(--dim);}
+  .nudge button { min-width:70px; font-variant-numeric:tabular-nums; }
+  .big { font-size:20px; padding:16px 18px; }
+  label { display:block; font-size:12px; color:var(--dim); margin:10px 0 4px; }
+  textarea,input,select { width:100%; background:#0d1024; color:var(--fg); border:1px solid #2b3358; border-radius:8px; padding:9px; font-size:14px; }
+  textarea{ min-height:120px; font-family:ui-monospace,monospace; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .next{ text-align:center; font-size:14px; color:var(--dim); }
+  .next b{ color:var(--fg); }
+  .learned{ font-size:12px; color:var(--dim); }
+  .yes{ color:var(--good); } .no{ color:var(--bad); }
+  .hint{ color:var(--dim); font-size:12px; line-height:1.4; }
+  .toast{ position:fixed; bottom:14px; left:50%; transform:translateX(-50%); background:#232a4d; padding:10px 16px; border-radius:10px; opacity:0; transition:.2s; }
+  .toast.show{ opacity:1; }
+</style>
+</head>
+<body>
+<header><h1>Cuss<span>Guard</span></h1></header>
+<main>
+
+  <div class="card">
+    <div class="clock" id="clock">0:00:00</div>
+    <div class="sub">
+      <span id="statePill" class="pill stop">stopped</span>
+      &nbsp; of <span id="dur">0:00:00</span>
+      &nbsp; <span id="muteInd"></span>
+    </div>
+    <div class="next" id="next" style="margin-top:8px;">no SRT loaded</div>
+    <div class="row" style="margin-top:12px;">
+      <button class="primary big" id="btnPlay">▶ Play</button>
+      <button class="big" id="btnPause">⏸ Pause</button>
+      <button class="ghost big" id="btnStop">⏹ Stop</button>
+    </div>
+    <div class="hint" style="text-align:center;margin-top:8px;">Pause = commercial break. The encoder push button does the same.</div>
+  </div>
+
+  <div class="card">
+    <label>Sync nudge &nbsp;<span id="offset" class="learned">offset +0 ms</span></label>
+    <div class="row nudge">
+      <button data-nudge="-1000">−1s</button>
+      <button data-nudge="-250">−250</button>
+      <button data-nudge="-100">−100</button>
+      <button data-nudge="100">+100</button>
+      <button data-nudge="250">+250</button>
+      <button data-nudge="1000">+1s</button>
+    </div>
+    <div class="grid2" style="margin-top:10px;">
+      <div><label>Jump to (h:m:s)</label><input id="seek" placeholder="0:12:30"></div>
+      <div style="display:flex;align-items:flex-end;"><button id="btnSeek" style="width:100%">Seek</button></div>
+    </div>
+    <div class="hint">Rotate the physical dial to scrub timing on the fly (±100 ms per click).</div>
+  </div>
+
+  <div class="card">
+    <label>Subtitle file (.srt)</label>
+    <input type="file" id="file" accept=".srt">
+    <button class="primary" id="btnUpload" style="margin-top:8px;width:100%">Upload &amp; scan</button>
+    <div class="sub" id="scanInfo" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="card">
+    <label>Banned words (one per line, # for comments)</label>
+    <textarea id="words" spellcheck="false"></textarea>
+    <button class="primary" id="btnWords" style="margin-top:8px;width:100%">Save &amp; rescan</button>
+  </div>
+
+  <div class="card">
+    <label>Learn your TV remote</label>
+    <div class="hint">Aim the remote at the receiver and press the matching key when prompted.</div>
+    <div class="row" style="margin-top:8px;">
+      <button id="learnMute">Learn MUTE <span id="lMute" class="learned"></span></button>
+      <button id="learnUp">Learn VOL+ <span id="lUp" class="learned"></span></button>
+      <button id="learnDn">Learn VOL− <span id="lDn" class="learned"></span></button>
+    </div>
+    <div class="sub" id="learnStatus" style="margin-top:8px;"></div>
+    <div class="row" style="margin-top:8px;">
+      <button class="ghost" id="testMute">Test mute toggle</button>
+      <button class="ghost" id="resync">TV is un-muted (resync)</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>Settings</label>
+    <div class="grid2">
+      <div><label>Pre-roll (ms before word)</label><input id="preroll" type="number"></div>
+      <div><label>Post-roll (ms after word)</label><input id="postroll" type="number"></div>
+      <div><label>Merge gap (ms)</label><input id="mergeGap" type="number"></div>
+      <div><label>Mute method</label>
+        <select id="method"><option value="learn">Remote MUTE (toggle)</option><option value="volume">Volume to zero</option></select>
+      </div>
+    </div>
+    <button class="primary" id="btnSettings" style="margin-top:10px;width:100%">Save settings &amp; rescan</button>
+  </div>
+
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+let lastStatus = {};
+
+function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1600); }
+function post(url){ return fetch(url,{method:"POST"}).then(r=>r.json()).then(render); }
+function hms(ms){ ms=Math.max(0,ms|0); let s=Math.floor(ms/1000); return `${Math.floor(s/3600)}:${String(Math.floor(s/60)%60).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`; }
+function parseHms(str){ const p=str.split(":").map(Number); if(p.some(isNaN))return null; let s=0; for(const n of p)s=s*60+n; return s*1000; }
+
+function render(st){
+  if(!st) return; lastStatus=st;
+  $("#clock").textContent=st.pos; $("#dur").textContent=st.dur;
+  const pill=$("#statePill"); pill.textContent=st.state; pill.className="pill "+st.state;
+  $("#muteInd").innerHTML = st.muted ? '<span class="mute">● MUTED</span>' : '';
+  $("#offset").textContent = "offset "+(st.offset_ms>=0?"+":"")+st.offset_ms+" ms";
+  if(st.next){ const eta=(st.next.eta_ms/1000).toFixed(1); $("#next").innerHTML=`next flag <b>"${st.next.word}"</b> in <b>${eta}s</b> (at ${st.next.mute_at_str})`; }
+  else $("#next").textContent = st.events? "no more flags ahead" : (st.cues? "no banned words matched":"no SRT loaded");
+  $("#scanInfo").textContent = `${st.cues} cues · ${st.events} mute events · ${st.words} words`;
+  // IR learned indicators
+  $("#lMute").innerHTML = st.ir.mute?'<span class="yes">✓</span>':'<span class="no">✗</span>';
+  $("#lUp").innerHTML   = st.ir.volup?'<span class="yes">✓</span>':'<span class="no">✗</span>';
+  $("#lDn").innerHTML   = st.ir.voldown?'<span class="yes">✓</span>':'<span class="no">✗</span>';
+  $("#learnStatus").textContent = st.ir.learning ? `⏺ Learning "${st.ir.learn_target}" — press the remote key…` : "";
+  // settings (only fill when not focused)
+  const a=document.activeElement;
+  for(const k of ["preroll","postroll","mergeGap"]) if($("#"+k)!==a && st[k]!=null) $("#"+k).value=st[k];
+  if($("#method")!==a && st.method) $("#method").value=st.method;
+}
+
+// Transport
+$("#btnPlay").onclick =()=>post("/api/control?cmd=play");
+$("#btnPause").onclick=()=>post("/api/control?cmd=pause");
+$("#btnStop").onclick =()=>post("/api/control?cmd=stop");
+document.querySelectorAll("[data-nudge]").forEach(b=>b.onclick=()=>post("/api/nudge?ms="+b.dataset.nudge));
+$("#btnSeek").onclick=()=>{ const ms=parseHms($("#seek").value.trim()); if(ms==null)return toast("bad time"); post("/api/seek?ms="+ms); };
+
+// Upload
+$("#btnUpload").onclick=()=>{
+  const f=$("#file").files[0]; if(!f)return toast("pick a file");
+  const fd=new FormData(); fd.append("srt",f,f.name);
+  fetch("/api/upload",{method:"POST",body:fd}).then(r=>r.json()).then(j=>{ toast(`Scanned: ${j.events} mute events`); refresh(); });
+};
+
+// Word list
+fetch("/api/wordlist").then(r=>r.text()).then(t=>$("#words").value=t);
+$("#btnWords").onclick=()=>fetch("/api/wordlist",{method:"POST",headers:{"Content-Type":"text/plain"},body:$("#words").value}).then(r=>r.json()).then(st=>{render(st);toast("Saved & rescanned");});
+
+// IR learn
+$("#learnMute").onclick=()=>post("/api/learn?name=mute");
+$("#learnUp").onclick  =()=>post("/api/learn?name=volup");
+$("#learnDn").onclick  =()=>post("/api/learn?name=voldown");
+$("#testMute").onclick =()=>post("/api/mute?on="+(lastStatus.muted?0:1));
+$("#resync").onclick   =()=>post("/api/resync?muted=0").then(()=>toast("Assuming TV un-muted"));
+
+// Settings
+$("#btnSettings").onclick=()=>{
+  const body=JSON.stringify({preroll:+$("#preroll").value,postroll:+$("#postroll").value,mergeGap:+$("#mergeGap").value,method:$("#method").value});
+  fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body}).then(r=>r.json()).then(st=>{render(st);toast("Saved & rescanned");});
+};
+
+function refresh(){ fetch("/api/status").then(r=>r.json()).then(render).catch(()=>{}); }
+setInterval(refresh, 250);
+refresh();
+</script>
+</body>
+</html>

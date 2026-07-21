@@ -1,0 +1,24 @@
+# CussGuard banned-word list — one word per line.
+# Lines starting with '#' are comments. Matching is case-insensitive,
+# whole-word (a listed word 3+ chars also matches longer forms, e.g.
+# "fuck" -> "fucking"), and tolerant of basic leetspeak (sh1t, f4ck).
+# Edit this list any time from the web UI, then "Save & rescan".
+
+# --- mild ---
+damn
+hell
+crap
+# --- strong (edit to taste) ---
+ass
+asshole
+bastard
+bitch
+bullshit
+dick
+piss
+prick
+# --- explicit ---
+fuck
+shit
+cunt
+# --- slurs: add any you want blocked ---
