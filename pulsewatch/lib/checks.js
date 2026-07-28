@@ -1,8 +1,12 @@
 'use strict';
 
 const net = require('net');
-const tls = require('tls');
+const http = require('http');
+const https = require('https');
 const { execFile } = require('child_process');
+
+const MAX_REDIRECTS = 5;
+const MAX_BODY_BYTES = 512 * 1024; // keyword search window
 
 // Parse "200-299,301,404" into a matcher function.
 function statusMatcher(spec) {
@@ -19,27 +23,60 @@ function statusMatcher(spec) {
   return (code) => ranges.some((r) => code >= r.lo && code <= r.hi);
 }
 
-function certDaysRemaining(hostname, port, timeoutMs) {
-  return new Promise((resolve) => {
-    const socket = tls.connect(
-      { host: hostname, port, servername: hostname, timeout: timeoutMs, rejectUnauthorized: false },
-      () => {
+// One HTTP(S) request implemented on node:http/https (not fetch) so TLS
+// certificate verification can be disabled per monitor (self-signed certs,
+// monitoring by internal IP). Returns {status, body, certDays} or throws.
+function httpRequest(urlStr, monitor, { signal, wantBody, firstHop, methodOverride }) {
+  return new Promise((resolve, reject) => {
+    let u;
+    try { u = new URL(urlStr); } catch { return reject(new Error(`invalid URL "${urlStr}"`)); }
+    const isHttps = u.protocol === 'https:';
+    const mod = isHttps ? https : http;
+
+    const headers = {};
+    for (const h of monitor.headers || []) {
+      if (h.name) headers[h.name] = h.value || '';
+    }
+    if (!Object.keys(headers).some((k) => k.toLowerCase() === 'user-agent')) {
+      headers['User-Agent'] = 'PulseWatch/1.0 (uptime monitor)';
+    }
+    const method = methodOverride || monitor.method || 'GET';
+    const body = ['GET', 'HEAD'].includes(method) ? null : monitor.body || null;
+
+    const req = mod.request(u, {
+      method,
+      headers,
+      signal,
+      rejectUnauthorized: !monitor.tlsIgnore
+    }, (res) => {
+      let certDays = null;
+      if (isHttps && firstHop) {
         try {
-          const cert = socket.getPeerCertificate();
+          const cert = res.socket.getPeerCertificate();
           if (cert && cert.valid_to) {
-            const days = (new Date(cert.valid_to).getTime() - Date.now()) / 86400000;
-            resolve(Math.floor(days));
-          } else {
-            resolve(null);
+            certDays = Math.floor((new Date(cert.valid_to).getTime() - Date.now()) / 86400000);
           }
-        } catch {
-          resolve(null);
-        }
-        socket.end();
+        } catch { /* cert info is best-effort */ }
       }
-    );
-    socket.on('error', () => resolve(null));
-    socket.on('timeout', () => { socket.destroy(); resolve(null); });
+      const chunks = [];
+      let size = 0;
+      res.on('data', (chunk) => {
+        if (wantBody && size < MAX_BODY_BYTES) {
+          chunks.push(chunk);
+          size += chunk.length;
+        }
+      });
+      res.on('end', () => resolve({
+        status: res.statusCode,
+        location: res.headers.location,
+        body: wantBody ? Buffer.concat(chunks).toString('utf8') : '',
+        certDays
+      }));
+      res.on('error', reject);
+    });
+    req.on('error', reject);
+    if (body != null) req.write(body);
+    req.end();
   });
 }
 
@@ -50,29 +87,32 @@ async function checkHttp(monitor) {
   const started = Date.now();
   const result = { ok: false, latency: null, message: '', certDays: null };
   try {
-    const headers = {};
-    for (const h of monitor.headers || []) {
-      if (h.name) headers[h.name] = h.value || '';
+    const wantBody = !!monitor.keyword;
+    let url = monitor.url;
+    let res = null;
+    let methodOverride = null;
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      res = await httpRequest(url, monitor, {
+        signal: controller.signal, wantBody, firstHop: hop === 0, methodOverride
+      });
+      if (hop === 0 && res.certDays != null) result.certDays = res.certDays;
+      if (![301, 302, 303, 307, 308].includes(res.status) || !res.location) break;
+      if (hop === MAX_REDIRECTS) {
+        result.latency = Date.now() - started;
+        result.message = `too many redirects (>${MAX_REDIRECTS})`;
+        return result;
+      }
+      // Browsers/fetch re-issue 301/302/303 redirects of non-GET requests as GET.
+      if ([301, 302, 303].includes(res.status)) methodOverride = 'GET';
+      url = new URL(res.location, url).href;
     }
-    if (!headers['User-Agent'] && !headers['user-agent']) {
-      headers['User-Agent'] = 'PulseWatch/1.0 (uptime monitor)';
-    }
-    const res = await fetch(monitor.url, {
-      method: monitor.method || 'GET',
-      headers,
-      body: ['GET', 'HEAD'].includes(monitor.method || 'GET') ? undefined : monitor.body || undefined,
-      redirect: 'follow',
-      signal: controller.signal
-    });
     result.latency = Date.now() - started;
-    const okStatus = statusMatcher(monitor.acceptedStatus)(res.status);
-    if (!okStatus) {
+    if (!statusMatcher(monitor.acceptedStatus)(res.status)) {
       result.message = `HTTP ${res.status}`;
       return result;
     }
     if (monitor.keyword) {
-      const text = await res.text();
-      const found = text.includes(monitor.keyword);
+      const found = res.body.includes(monitor.keyword);
       const wanted = !monitor.keywordInvert;
       if (found !== wanted) {
         result.message = wanted
@@ -86,19 +126,12 @@ async function checkHttp(monitor) {
     return result;
   } catch (err) {
     result.latency = Date.now() - started;
-    result.message = err.name === 'AbortError' ? `timeout after ${monitor.timeout || 10}s`
+    result.message = err.name === 'AbortError' || err.code === 'ABORT_ERR'
+      ? `timeout after ${monitor.timeout || 10}s`
       : (err.cause && err.cause.message) || err.message;
     return result;
   } finally {
     clearTimeout(timer);
-    if (result.ok !== undefined && monitor.certCheck) {
-      try {
-        const u = new URL(monitor.url);
-        if (u.protocol === 'https:') {
-          result.certDays = await certDaysRemaining(u.hostname, Number(u.port) || 443, timeoutMs);
-        }
-      } catch { /* cert info is best-effort */ }
-    }
   }
 }
 
@@ -164,4 +197,4 @@ async function runCheck(monitor, state = {}) {
   }
 }
 
-module.exports = { runCheck, statusMatcher, certDaysRemaining };
+module.exports = { runCheck, statusMatcher };

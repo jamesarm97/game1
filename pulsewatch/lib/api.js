@@ -45,6 +45,7 @@ function sanitizeMonitor(input, existing = {}) {
     m.keywordInvert = input.keywordInvert != null ? !!input.keywordInvert : !!existing.keywordInvert;
     m.body = typeof input.body === 'string' ? input.body : existing.body || '';
     m.headers = sanitizePairs(input.headers ?? existing.headers);
+    m.tlsIgnore = input.tlsIgnore != null ? !!input.tlsIgnore : !!existing.tlsIgnore;
     m.certCheck = input.certCheck != null ? !!input.certCheck : !!existing.certCheck;
     m.certExpiryDays = clampInt(input.certExpiryDays ?? existing.certExpiryDays, 1, 365, 14);
   } else if (type === 'tcp' || type === 'ping') {
@@ -131,6 +132,7 @@ function monitorView(store, scheduler, monitor, opts = {}) {
     keywordInvert: monitor.keywordInvert,
     headers: monitor.headers,
     body: monitor.body,
+    tlsIgnore: monitor.tlsIgnore,
     certCheck: monitor.certCheck,
     certExpiryDays: monitor.certExpiryDays,
     grace: monitor.grace,

@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const http = require('http');
+const https = require('https');
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
@@ -27,6 +28,35 @@ test('status matcher parses ranges and lists', () => {
   assert.ok(!m(300) && !m(500));
   const def = statusMatcher(undefined);
   assert.ok(def(204) && !def(404));
+});
+
+test('https monitor with self-signed cert: down by default, up with tlsIgnore', async (t) => {
+  // Cert CN is "selfsigned.test" and self-signed, so hitting it via
+  // https://127.0.0.1 fails TLS verification — the internal-IP scenario.
+  const fixtures = path.join(__dirname, 'fixtures');
+  const tlsServer = https.createServer({
+    key: fs.readFileSync(path.join(fixtures, 'selfsigned.key')),
+    cert: fs.readFileSync(path.join(fixtures, 'selfsigned.crt'))
+  }, (req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('secure hello');
+  });
+  const tlsPort = await listen(tlsServer);
+  t.after(() => tlsServer.close());
+
+  const { runCheck } = require('../lib/checks');
+  const base = {
+    type: 'http', name: 'internal', url: `https://127.0.0.1:${tlsPort}/`,
+    timeout: 5, keyword: 'secure hello'
+  };
+
+  const strict = await runCheck({ ...base });
+  assert.equal(strict.ok, false);
+  assert.match(strict.message, /certificate|altnames|self.signed/i);
+
+  const relaxed = await runCheck({ ...base, tlsIgnore: true, certCheck: true });
+  assert.equal(relaxed.ok, true, `expected up, got: ${relaxed.message}`);
+  assert.ok(relaxed.certDays > 300, `cert expiry should still be reported (got ${relaxed.certDays})`);
 });
 
 test('end-to-end: auth, monitors, checks, notifications, status page', async (t) => {

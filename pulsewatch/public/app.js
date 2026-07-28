@@ -321,6 +321,9 @@ async function renderMonitorForm(id) {
           <div class="field"><label>Warn when cert expires within (days)</label>
             <input type="number" id="f_certdays" value="${m.certExpiryDays || 14}" min="1" max="365"></div>
         </div>
+        <div class="field"><div class="checkbox">
+          <input type="checkbox" id="f_tlsignore" ${m.tlsIgnore ? 'checked' : ''}>
+          <label for="f_tlsignore">Ignore TLS certificate errors (self-signed certs, monitoring by internal IP)</label></div></div>
       </div>
 
       <div data-when="tcp ping">
@@ -385,7 +388,8 @@ async function renderMonitorForm(id) {
       Object.assign(body, {
         url: val('f_url'), method: val('f_method'), acceptedStatus: val('f_status'),
         keyword: val('f_keyword'), keywordInvert: document.getElementById('f_kwinvert').checked,
-        certCheck: document.getElementById('f_cert').checked, certExpiryDays: val('f_certdays')
+        certCheck: document.getElementById('f_cert').checked, certExpiryDays: val('f_certdays'),
+        tlsIgnore: document.getElementById('f_tlsignore').checked
       });
     } else if (body.type === 'tcp') {
       Object.assign(body, { host: val('f_host'), port: val('f_port') });

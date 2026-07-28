@@ -12,7 +12,9 @@ State is persisted to a single JSON file.
 
 **Monitor types**
 - **HTTP(S)** — status-code ranges (e.g. `200-299,301`), custom method/headers/body,
-  required-keyword or forbidden-keyword content checks, redirect following
+  required-keyword or forbidden-keyword content checks, redirect following, and an
+  optional **ignore TLS certificate errors** mode for self-signed certs or services
+  monitored by internal IP (cert expiry can still be reported)
 - **TLS certificate expiry** — warns before an HTTPS certificate runs out (configurable threshold)
 - **TCP port** — connect checks for databases, mail servers, game servers…
 - **Ping (ICMP)** — uses the system `ping` binary when available
