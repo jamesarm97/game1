@@ -319,6 +319,8 @@ const STATS = {
   bronto: { speed: 6, jump: 8.6, hw: .7, h: 2.6, seat: [2.42, .2], label: 'long-neck', emoji: '🦕', cam: 10 },
   ptero: { speed: 6, airSpeed: 13, jump: 9, hw: .45, h: 1.5, fly: true, seat: [1.1, 0], label: 'pterodactyl', emoji: '🪽', cam: 7.5 },
   car: { speed: 15, jump: 8.6, hw: .7, h: 1.3, car: true, seat: [.72, -.3], label: 'car', emoji: '🚗', cam: 7.5 },
+  dad: { speed: 6.5, jump: 9, hw: .32, h: 2.0, person: true, seat: [1.62, -.3], label: 'Dad', cam: 7 },
+  lady: { speed: 6.5, jump: 9, hw: .32, h: 2.0, person: true, seat: [1.62, -.3], label: 'her', cam: 7 },
   baby: { speed: 7.5, jump: 9, hw: .25, h: .8 },
   dog: { speed: 9.5, jump: 9, hw: .24, h: .6 },
 };
@@ -391,6 +393,58 @@ function buildCar(c) {
   }
   return { g, parts };
 }
+function adultFace(o) {
+  return canvasTex(64, g => {
+    g.fillStyle = o.skinCss; g.fillRect(0, 0, 64, 64);
+    if (o.stubble) { g.fillStyle = 'rgba(110,80,55,.22)'; g.fillRect(0, 40, 64, 24); g.fillRect(0, 26, 6, 20); g.fillRect(58, 26, 6, 20); g.fillRect(20, 38, 24, 5); }
+    g.fillStyle = 'rgba(240,120,130,.3)'; for (const x of [12, 52]) { g.beginPath(); g.arc(x, 40, 6, 0, 7); g.fill(); }
+    for (const x of [20, 44]) {
+      g.fillStyle = '#fff'; g.beginPath(); g.ellipse(x, 28, 5.5, 5, 0, 0, 7); g.fill();
+      g.fillStyle = o.eye; g.beginPath(); g.arc(x, 28.5, 3.6, 0, 7); g.fill();
+      g.fillStyle = '#16233a'; g.beginPath(); g.arc(x, 28.5, 1.7, 0, 7); g.fill();
+      g.strokeStyle = o.brow; g.lineWidth = o.glasses ? 2 : 3; g.beginPath(); g.moveTo(x - 7, 19); g.quadraticCurveTo(x, 16, x + 7, 19); g.stroke();
+    }
+    g.fillStyle = 'rgba(190,120,100,.5)'; g.beginPath(); g.arc(32, 37, 2.4, 0, 7); g.fill();
+    g.fillStyle = '#a8424c'; g.beginPath(); g.moveTo(21, 46); g.quadraticCurveTo(32, 58, 43, 46); g.closePath(); g.fill();
+    g.fillStyle = '#fff'; g.beginPath(); g.moveTo(23, 46.5); g.lineTo(41, 46.5); g.quadraticCurveTo(32, 51, 23, 46.5); g.fill();
+    if (o.glasses) { g.strokeStyle = '#c2274f'; g.lineWidth = 3; g.strokeRect(10.5, 20.5, 19, 15); g.strokeRect(34.5, 20.5, 19, 15); g.beginPath(); g.moveTo(29.5, 26); g.lineTo(34.5, 26); g.stroke(); }
+    g.fillStyle = o.hairCss; g.beginPath(); g.moveTo(0, 0); g.lineTo(64, 0);
+    if (o.glasses) { g.lineTo(64, 16); g.quadraticCurveTo(50, 4, 26, 5); g.quadraticCurveTo(10, 6, 0, 18); } else { g.lineTo(64, 9); g.quadraticCurveTo(32, 2, 0, 9); }
+    g.fill();
+  });
+}
+function bubble(text) {
+  const t = canvasTex(256, g => {
+    g.fillStyle = '#fff'; g.strokeStyle = '#3a2352'; g.lineWidth = 8; g.beginPath(); g.roundRect(8, 70, 240, 100, 40); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(108, 168); g.lineTo(128, 200); g.lineTo(148, 168); g.fillStyle = '#fff'; g.fill(); g.stroke(); g.fillRect(104, 150, 48, 16);
+    g.fillStyle = '#3a2352'; g.font = '800 40px "Baloo 2", "Arial Rounded MT Bold", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 128, 122);
+  });
+  const sp = new T.Sprite(new T.SpriteMaterial({ map: t, transparent: true, depthWrite: false })); sp.scale.set(1.9, 1.9, 1); sp.visible = false; return sp;
+}
+function buildAdult(o) {
+  const g = new T.Group(), parts = { legs: [], wings: [], arms: [] }, sk = mat(o.skin), hr = mat(o.hair);
+  for (const s of [-1, 1]) {
+    const l = pivot(g, s * .14, .9, 0); box(l, .25, .82, .27, 0, -.41, 0, o.pants); box(l, .26, .1, .34, 0, -.85, .03, o.shoe); parts.legs.push(l);
+    const a = pivot(g, s * .38, 1.56, 0); parts.arms.push(a);
+    if (o.longSleeve) { box(a, .18, .62, .21, 0, -.31, 0, o.shirt); box(a, .15, .09, .17, 0, -.66, 0, sk); }
+    else { box(a, .19, .3, .22, 0, -.15, 0, o.shirt); box(a, .15, .4, .17, 0, -.5, 0, sk); }
+  }
+  box(g, .58, .7, .32, 0, 1.25, 0, o.shirt);
+  if (o.logo) logoPlane(g, .5, 0, 1.36, .163, 0);
+  const head = parts.head = pivot(g, 0, 1.6, 0);
+  box(head, .44, .44, .44, 0, .22, 0, [sk, sk, hr, sk, texMat(adultFace(o)), hr]);
+  box(head, .47, .08, .47, 0, .46, 0, o.hair);
+  if (o.glasses) { // long straight hair
+    box(head, .48, .8, .08, 0, .08, -.25, o.hair);
+    for (const s of [-1, 1]) { box(head, .07, .74, .3, s * .245, .1, -.05, o.hair); box(head, .07, .6, .07, s * .21, -.02, .2, o.hair); }
+  } else { // slicked back and tied
+    box(head, .47, .34, .07, 0, .29, -.235, o.hair); for (const s of [-1, 1]) box(head, .05, .2, .3, s * .235, .34, -.07, o.hair);
+    box(head, .14, .26, .12, 0, .1, -.3, o.hair);
+  }
+  if (o.name) { const tag = parts.tag = nameTag(o.name); tag.position.y = 2.42; g.add(tag); }
+  parts.bubble = bubble(o.says); parts.bubble.position.y = 2.95; g.add(parts.bubble);
+  return { g, parts };
+}
 const blobGeo = new T.CircleGeometry(1, 16), blobMat = new T.MeshBasicMaterial({ color: 0x1b1030, transparent: true, opacity: .22, depthWrite: false });
 function addShadow(e) { const m = new T.Mesh(blobGeo, blobMat); m.rotation.x = -Math.PI / 2; m.scale.setScalar(e.stats.hw * 1.7); scene.add(m); e.shadow = m; }
 
@@ -403,7 +457,7 @@ function spot(x, z) { // nearest free land cell
   return new T.Vector3(x, hAt(x, z), z);
 }
 function addMount(kind, x, z, yaw, a, b) {
-  const built = kind === 'unicorn' ? buildUnicorn(a) : kind === 'rex' ? buildRex(a, b) : kind === 'bronto' ? buildBronto(a, b) : kind === 'ptero' ? buildPtero(a, b) : buildCar(a);
+  const built = STATS[kind].person ? buildAdult(a) : kind === 'unicorn' ? buildUnicorn(a) : kind === 'rex' ? buildRex(a, b) : kind === 'bronto' ? buildBronto(a, b) : kind === 'ptero' ? buildPtero(a, b) : buildCar(a);
   const e = { kind, stats: STATS[kind], group: built.g, parts: built.parts, pos: kind === 'car' ? new T.Vector3(x, hAt(x, z), z) : spot(x, z), vel: new T.Vector3(), yaw, onGround: false, ph: rng() * 6, carSpeed: 0, ai: { t: rng() * 3, moving: false, dx: 0, dz: 1 }, range: 10 };
   e.home = e.pos.clone(); scene.add(e.group); addShadow(e); mounts.push(e); return e;
 }
@@ -428,6 +482,9 @@ const CARC = [0x26262b, 0x36cfa9, 0xffd23f, 0x9b7bff, 0x5fa8ff, 0xff8a5c];
   box(bb, 9.6, 3.4, .3, 0, 5.2, 0, 0x1c1c1c); for (const sd of [-1, 1]) box(bb, .4, 3.6, .4, sd * 3.2, 1.8, 0, 0x8b5a2b);
   logoPlane(bb, 9.2, 0, 5.2, .16, 0); logoPlane(bb, 9.2, 0, 5.2, -.16, Math.PI);
 }
+// grown-ups in town who give shoulder rides
+addMount('dad', 75.5, 70.5, Math.PI, { name: 'Dad', says: 'Hi sweetie!', skin: 0xf1c7a8, skinCss: '#f1c7a8', hair: 0x3d2a1e, hairCss: '#3d2a1e', eye: '#7f9db5', brow: '#3d2a1e', stubble: true, shirt: 0x1c1c1f, logo: true, pants: 0x4a6488, shoe: 0x2b2b30 }).range = 4;
+addMount('lady', 69.5, 69.5, Math.PI, { says: 'Hello!', skin: 0xf6d3bd, skinCss: '#f6d3bd', hair: 0x7a5236, hairCss: '#7a5236', eye: '#5d6f7a', brow: '#6a4a34', glasses: true, longSleeve: true, shirt: 0xf5efe2, pants: 0x3b4a6b, shoe: 0x8a5a44 }).range = 4;
 
 /* ---------- player ---------- */
 const player = { stats: STATS.player, pos: new T.Vector3(72.5, TOWN_Y, 72.5), vel: new T.Vector3(), yaw: Math.PI, onGround: false, ph: 0, group: new T.Group() };
@@ -502,13 +559,13 @@ function updateParticles(dt) {
 }
 
 /* ---------- sound ---------- */
-let AC = null, soundOn = !(save && save.sound === false), musicOn = !(save && save.music === false), musicGain = null, nextT = 0, mstep = 0;
+let AC = null, soundOn = !(save && save.sound === false), musicOn = !(save && save.music === false), musicGain = null, master = null, silentEl = null, nextT = 0, mstep = 0;
 function tone(f, d, type = 'sine', v = .1, delay = 0, f2) {
   if (!AC || !soundOn) return;
   const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
   o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
   g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + d);
-  o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + d + .03);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + d + .03);
 }
 const sfx = {
   jump: () => tone(320, .16, 'sine', .08, 0, 620),
@@ -535,11 +592,29 @@ function musicTick() {
     nextT += .27; mstep++;
   }
 }
-function initAudio() {
-  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); musicGain = AC.createGain(); musicGain.gain.value = .11; musicGain.connect(AC.destination); setInterval(musicTick, 100); } catch (e) { /* no sound */ } }
-  if (AC && AC.state === 'suspended') AC.resume();
+// A silent looping <audio> element keeps iPhone/iPad sound on even when the ringer switch is set to silent.
+function silentWav() {
+  const n = 4000, b = new Uint8Array(44 + n), dv = new DataView(b.buffer), w = (o, t) => { for (let i = 0; i < t.length; i++) b[o + i] = t.charCodeAt(i); };
+  w(0, 'RIFF'); dv.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, 8000, true); dv.setUint32(28, 8000, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true); w(36, 'data'); dv.setUint32(40, n, true); b.fill(128, 44);
+  let t = ''; for (const c of b) t += String.fromCharCode(c); return 'data:audio/wav;base64,' + btoa(t);
 }
-document.addEventListener('visibilitychange', () => { if (!AC) return; if (document.hidden) AC.suspend(); else if (started) AC.resume(); });
+function initAudio() {
+  if (!AC) {
+    try {
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older browsers */ }
+      AC = new (window.AudioContext || window.webkitAudioContext)();
+      master = AC.createGain(); master.gain.value = 1.6; master.connect(AC.destination);
+      musicGain = AC.createGain(); musicGain.gain.value = .16; musicGain.connect(master); setInterval(musicTick, 100);
+      silentEl = document.createElement('audio'); silentEl.loop = true; silentEl.setAttribute('playsinline', ''); silentEl.src = silentWav();
+    } catch (e) { /* no sound */ }
+  }
+  if (AC && AC.state !== 'running') { try { const p = AC.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* stays silent */ } }
+  if (silentEl && silentEl.paused) { try { const p = silentEl.play(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* stays silent */ } }
+}
+// browsers only allow sound to start from a real tap/click/key press, so retry on every one until it is running
+for (const ev of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) window.addEventListener(ev, () => { if (started && (!AC || AC.state !== 'running' || (silentEl && silentEl.paused))) initAudio(); }, true);
+document.addEventListener('visibilitychange', () => { if (!AC) return; if (document.hidden) { AC.suspend(); if (silentEl) silentEl.pause(); } else if (started) initAudio(); });
 
 /* ---------- stars, markers, items ---------- */
 const starShape = new T.Shape();
@@ -810,8 +885,8 @@ function rideAction() {
   }
   const m = nearestMount(); if (!m) return;
   riding = m; m.group.add(player.group); player.group.position.set(0, m.stats.seat[0] - .5, m.stats.seat[1]); player.group.rotation.y = 0;
-  m.vel.set(0, 0, 0); sfx.ride(); burst(m.pos.clone().add(new T.Vector3(0, m.stats.h, 0)), 30, null, 3);
-  if (!hinted[m.kind]) { hinted[m.kind] = 1; toast(m.kind === 'unicorn' ? (isTouch ? 'Tap 🪽 for wings, then hold jump to fly!' : 'Press Q for wings, then hold Space to fly!') : m.kind === 'ptero' ? 'Hold jump to flap and fly! 🪽' : m.kind === 'car' ? 'Vroom! Steer left and right 🚗' : m.kind === 'rex' ? 'Stomp stomp! 🦖' : 'So tall! 🦕'); }
+  m.vel.set(0, 0, 0); m.greet = false; sfx.ride(); burst(m.pos.clone().add(new T.Vector3(0, m.stats.h, 0)), 30, null, 3);
+  if (!hinted[m.kind]) { hinted[m.kind] = 1; toast(m.stats.person ? 'Wheee! Shoulder ride! 🎉' : m.kind === 'unicorn' ? (isTouch ? 'Tap 🪽 for wings, then hold jump to fly!' : 'Press Q for wings, then hold Space to fly!') : m.kind === 'ptero' ? 'Hold jump to flap and fly! 🪽' : m.kind === 'car' ? 'Vroom! Steer left and right 🚗' : m.kind === 'rex' ? 'Stomp stomp! 🦖' : 'So tall! 🦕'); }
 }
 
 function flyAction() {
@@ -869,8 +944,8 @@ function animGirl(dt) {
   for (const g of girls) {
     const P = g.P;
     if (riding) {
-      const car = riding.stats.car;
-      P.legs[0].rotation.set(-1.45, 0, car ? 0 : -.35); P.legs[1].rotation.set(-1.45, 0, car ? 0 : .35);
+      const car = riding.stats.car, sp2 = car ? 0 : riding.stats.person ? .8 : .35;
+      P.legs[0].rotation.set(-1.45, 0, -sp2); P.legs[1].rotation.set(-1.45, 0, sp2);
       P.arms[0].rotation.set(-.9, 0, 0); P.arms[1].rotation.set(-.9, 0, 0);
     } else {
       const air = !player.onGround && player.pos.y > SEA;
@@ -887,6 +962,12 @@ function animMount(m, dt) {
   const amp = Math.min(1, sp / 3) * (m.kind === 'bronto' ? .35 : .7), s = Math.sin(m.ph) * amp;
   if (P.legs.length === 4) { P.legs[0].rotation.x = s; P.legs[3].rotation.x = s; P.legs[1].rotation.x = -s; P.legs[2].rotation.x = -s; }
   else if (P.legs.length === 2) { P.legs[0].rotation.x = s; P.legs[1].rotation.x = -s; }
+  if (P.arms) {
+    if (m === riding) { P.arms[0].rotation.set(-2.5, 0, .25); P.arms[1].rotation.set(-2.5, 0, -.25); }
+    else { P.arms[0].rotation.set(-s, 0, 0); if (m.greet) P.arms[1].rotation.set(-2.9, 0, Math.sin(clock.elapsedTime * 9) * .35); else P.arms[1].rotation.set(s, 0, 0); }
+    P.bubble.visible = !!m.greet && m !== riding;
+    if (P.tag) P.tag.visible = !m.greet && m !== riding;
+  }
   if (P.tail) P.tail.rotation.y = Math.sin(m.ph * .7) * .25;
   if (P.head) P.head.rotation.x = Math.sin(m.ph * .5) * .05;
   if (P.wings.length) { if (m.kind === 'unicorn') for (const w of P.wings) w.visible = !!m.flying; const f = m.onGround ? .15 : Math.sin(clock.elapsedTime * 11) * .65; P.wings[0].rotation.z = -f; P.wings[1].rotation.z = f; }
@@ -900,6 +981,11 @@ function placeShadow(e, hidden) {
   s.visible = e.pos.y - y < 12; s.position.set(e.pos.x, Math.max(y, SEA) + .03, e.pos.z);
 }
 function wander(m, dt) {
+  if (m.stats.person) { // stop, turn and wave when she comes close
+    const dx = player.pos.x - m.pos.x, dz = player.pos.z - m.pos.z;
+    m.greet = started && !riding && Math.hypot(dx, dz) < 4.5 && Math.abs(player.pos.y - m.pos.y) < 3;
+    if (m.greet) { m.yaw = lerpAngle(m.yaw, Math.atan2(dx, dz), Math.min(1, 6 * dt)); drive(m, dt, 0, 0, false, false, false, false); return; }
+  }
   const a = m.ai; a.t -= dt;
   if (a.t <= 0) { a.moving = !a.moving; a.t = a.moving ? 1.5 + rng() * 3 : 1 + rng() * 4; const an = rng() * 6.283; a.dx = Math.sin(an); a.dz = Math.cos(an); }
   let wx = 0, wz = 0;
@@ -971,7 +1057,7 @@ function frame() {
 
   // prompt
   let pr = '';
-  if (started) { if (riding) pr = isTouch ? '' : 'E — hop off' + (riding.kind === 'unicorn' ? (riding.flying ? ' · Q — wings away' : ' · Q — wings') : ''); else { const m = nearestMount(); if (m) pr = (isTouch ? 'Tap 🦄 to ride the ' : 'E — ride the ') + (m.label || m.stats.label) + ' ' + (m.emoji || m.stats.emoji); } }
+  if (started) { if (riding) pr = isTouch ? '' : 'E — hop off' + (riding.kind === 'unicorn' ? (riding.flying ? ' · Q — wings away' : ' · Q — wings') : ''); else { const m = nearestMount(); if (m) pr = m.stats.person ? (isTouch ? 'Tap 🦄 for a shoulder ride' : 'E — shoulder ride') + (m.kind === 'dad' ? ' with Dad' : '') : (isTouch ? 'Tap 🦄 to ride the ' : 'E — ride the ') + (m.label || m.stats.label) + ' ' + (m.emoji || m.stats.emoji); } }
   $('tFly').hidden = !(riding && riding.kind === 'unicorn');
   if (pr !== promptShown) { promptShown = pr; $('prompt').textContent = pr; $('prompt').hidden = !pr; }
 
@@ -995,13 +1081,13 @@ function frame() {
 function drawMap(b, time) {
   const g = mapCtx; g.drawImage(mapBase, 0, 0);
   for (const st of stars) if (st.visible) { g.fillStyle = '#fff36b'; g.fillRect(st.position.x - 1, st.position.z - 1, 2, 2); }
-  for (const m of mounts) { g.fillStyle = m.kind === 'unicorn' ? '#ff4fa3' : m.kind === 'car' ? '#3a2352' : '#1f8a3b'; g.fillRect(m.pos.x - 1.5, m.pos.z - 1.5, 3, 3); }
+  for (const m of mounts) { g.fillStyle = m.stats.person ? '#2f6bff' : m.kind === 'unicorn' ? '#ff4fa3' : m.kind === 'car' ? '#3a2352' : '#1f8a3b'; g.fillRect(m.pos.x - 1.5, m.pos.z - 1.5, 3, 3); }
   for (const r of rings) if (r.visible) { g.strokeStyle = '#ff4fa3'; g.lineWidth = 2; g.beginPath(); g.arc(r.position.x, r.position.z, 3, 0, 7); g.stroke(); }
   if (marker) { g.strokeStyle = '#fff'; g.fillStyle = '#ffb300'; g.lineWidth = 2; g.beginPath(); g.arc(marker.x, marker.z, 4 + Math.sin(time * 5) * 1.5, 0, 7); g.fill(); g.stroke(); }
   const yaw = riding ? riding.yaw : player.yaw;
   g.save(); g.translate(b.pos.x, b.pos.z); g.rotate(-yaw); g.fillStyle = '#fff'; g.strokeStyle = '#3a2352'; g.lineWidth = 1.5;
   g.beginPath(); g.moveTo(0, 6); g.lineTo(4.5, -4.5); g.lineTo(0, -2); g.lineTo(-4.5, -4.5); g.closePath(); g.fill(); g.stroke(); g.restore();
 }
-window.__game = { dog, flyAction, player, mounts, S, startGame, rideAction, get riding() { return riding; }, setCam(y, p) { camYaw = y; camPitch = p; }, toggleOutfit, input };
+window.__game = { audio: () => ({ AC, master }), dog, flyAction, player, mounts, S, startGame, rideAction, get riding() { return riding; }, setCam(y, p) { camYaw = y; camPitch = p; }, toggleOutfit, input };
 frame();
 })();
