@@ -69,6 +69,7 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .tb { width: 60px; height: 60px; border-radius: 50%; border: 0; font-size: 26px; background: var(--panel); box-shadow: 0 4px 0 rgba(58, 35, 82, .2); touch-action: none; padding: 0; }
 .tb:active { transform: translateY(3px); box-shadow: none; }
 #tJump { background: var(--pink); }
+#tFly { grid-column: 2; background: #d9c8ff; }
 #tRide { background: var(--sun); }
 #start {
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; box-sizing: border-box;
@@ -110,6 +111,7 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
   <div id="touch" hidden>
     <div id="joy"><div id="knob"></div></div>
     <div id="tbtns">
+      <button class="tb" id="tFly" aria-label="Unicorn wings" hidden>🪽</button>
       <button class="tb" id="tBreak" aria-label="Break block">⛏️</button>
       <button class="tb" id="tPlace" aria-label="Place block">🧱</button>
       <button class="tb" id="tRide" aria-label="Ride or hop off">🦄</button>
@@ -121,7 +123,7 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 <div id="start">
   <div id="card">
     <h1>Sparkle Island</h1>
-    <p>Ride unicorns, zoom around in toy cars, make friends with dinosaurs and build anything you like.</p>
+    <p>Ride unicorns, zoom around in toy cars, make friends with dinosaurs and build anything you like. June Bug the dog comes along too.</p>
     <div id="keys"></div>
     <button id="play">Play</button>
     <div><button id="reset" hidden>Start a new game</button></div>

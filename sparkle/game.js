@@ -314,17 +314,19 @@ function buildGirl(outfit) {
 /* ---------- animals & cars ---------- */
 const STATS = {
   player: { speed: 6, jump: 8.6, hw: .3, h: 1.6 },
-  unicorn: { speed: 10.5, jump: 11.5, hw: .4, h: 1.9, glide: true, seat: [1.3, 0], label: 'unicorn', emoji: '🦄', cam: 6.5 },
+  unicorn: { speed: 10.5, jump: 11.5, hw: .4, h: 1.9, glide: true, airSpeed: 14, seat: [1.3, 0], label: 'unicorn', emoji: '🦄', cam: 6.5 },
   rex: { speed: 8.5, jump: 9.5, hw: .55, h: 2.6, stomp: true, seat: [2.12, -.1], label: 'T-rex', emoji: '🦖', cam: 8 },
   bronto: { speed: 6, jump: 8.6, hw: .7, h: 2.6, seat: [2.42, .2], label: 'long-neck', emoji: '🦕', cam: 10 },
   ptero: { speed: 6, airSpeed: 13, jump: 9, hw: .45, h: 1.5, fly: true, seat: [1.1, 0], label: 'pterodactyl', emoji: '🪽', cam: 7.5 },
   car: { speed: 15, jump: 8.6, hw: .7, h: 1.3, car: true, seat: [.72, -.3], label: 'car', emoji: '🚗', cam: 7.5 },
   baby: { speed: 7.5, jump: 9, hw: .25, h: .8 },
+  dog: { speed: 9.5, jump: 9, hw: .24, h: .6 },
 };
 function eye(parent, x, y, z, s) { for (const sd of [-1, 1]) { box(parent, .04, s, s, sd * x, y, z, 0xffffff); box(parent, .05, s * .55, s * .55, sd * (x + .01), y - s * .1, z + s * .1, 0x1b1b2f); } }
 function buildUnicorn(c) {
-  const g = new T.Group(), parts = { legs: [] };
+  const g = new T.Group(), parts = { legs: [], wings: [] };
   box(g, .6, .55, 1.25, 0, 1.05, 0, c);
+  for (const s of [-1, 1]) { const w = pivot(g, s * .3, 1.3, .12); box(w, .9, .06, .55, s * .45, 0, 0, 0xffffff); box(w, .55, .06, .4, s * 1.1, 0, -.08, 0xffc9ec); box(w, .3, .06, .28, s * 1.5, 0, -.14, 0xc9b8ff); w.visible = false; parts.wings.push(w); }
   for (const [x, z] of [[-.2, .45], [.2, .45], [-.2, -.45], [.2, -.45]]) { const l = pivot(g, x, .8, z); box(l, .17, .72, .17, 0, -.36, 0, c); box(l, .19, .1, .19, 0, -.75, 0, 0xffb7dc); parts.legs.push(l); }
   const neck = pivot(g, 0, 1.15, .5); neck.rotation.x = .45; box(neck, .28, .75, .3, 0, .32, 0, c);
   RAINBOW.forEach((rc, i) => box(neck, .1, .14, .16, 0, .08 + i * .12, -.2, rc));
@@ -338,7 +340,7 @@ function buildUnicorn(c) {
   return { g, parts };
 }
 function buildRex(c, belly) {
-  const g = new T.Group(), parts = { legs: [] };
+  const g = new T.Group(), parts = { legs: [], wings: [] };
   box(g, .9, 1.0, 1.5, 0, 1.65, 0, c); box(g, .7, .3, 1.3, 0, 1.12, .05, belly);
   for (const s of [-1, 1]) { const l = pivot(g, s * .33, 1.2, -.1); box(l, .34, 1.0, .42, 0, -.5, 0, c); box(l, .38, .2, .62, 0, -1.1, .1, c); parts.legs.push(l); box(g, .14, .36, .14, s * .5, 1.55, .68, c).rotation.x = -.7; }
   box(g, .6, .6, .5, 0, 2.05, .62, c);
@@ -353,7 +355,7 @@ function buildRex(c, belly) {
   return { g, parts };
 }
 function buildBronto(c, dark) {
-  const g = new T.Group(), parts = { legs: [] };
+  const g = new T.Group(), parts = { legs: [], wings: [] };
   box(g, 1.4, 1.2, 2.3, 0, 1.85, 0, c);
   for (const [x, z] of [[-.45, .75], [.45, .75], [-.45, -.75], [.45, -.75]]) { const l = pivot(g, x, 1.3, z); box(l, .45, 1.3, .45, 0, -.65, 0, c); parts.legs.push(l); }
   for (let i = 0; i < 5; i++) { const w = .52 - i * .03; box(g, w, .72, w, 0, 2.5 + i * .6, 1.1 + i * .28, c); }
@@ -376,7 +378,7 @@ function buildPtero(c, c2) {
   return { g, parts };
 }
 function buildCar(c) {
-  const g = new T.Group(), parts = { legs: [], wheels: [] };
+  const g = new T.Group(), parts = { legs: [], wings: [], wheels: [] };
   box(g, 1.3, .4, 2.5, 0, .52, 0, c); box(g, 1.3, .26, .85, 0, .84, .8, c); box(g, 1.3, .26, .5, 0, .84, -1.0, c);
   box(g, 1.2, .42, .06, 0, 1.12, .38, new T.MeshLambertMaterial({ color: 0xcfefff, transparent: true, opacity: .55 }));
   box(g, 1.05, .55, .16, 0, .98, -.72, 0xffffff);
@@ -456,17 +458,17 @@ function stepBody(e, dt) {
 }
 // wx,wz: wish direction (length <= 1) in world space. direct: velocity already set (cars).
 function drive(e, dt, wx, wz, jumpHeld, jumpPressed, sprint, direct) {
-  const s = e.stats, inWater = e.pos.y < SEA - .85;
+  const s = e.stats, inWater = e.pos.y < SEA - .85, fly = s.fly || e.flying;
   if (!direct) {
-    let sp = s.speed * (sprint ? 1.4 : 1); if (s.fly && !e.onGround) sp = s.airSpeed; if (inWater) sp *= .6;
+    let sp = s.speed * (sprint ? 1.4 : 1); if (fly && !e.onGround) sp = s.airSpeed; if (inWater) sp *= .6;
     const k = Math.min(1, (e.onGround ? 12 : 6) * dt);
     e.vel.x += (wx * sp - e.vel.x) * k; e.vel.z += (wz * sp - e.vel.z) * k;
   }
   if (inWater) { e.vel.y += (2.5 - e.vel.y) * Math.min(1, 5 * dt); if (jumpHeld) e.vel.y = 4.5; }
   else {
-    e.vel.y -= (s.fly && !e.onGround ? 11 : 26) * dt;
+    e.vel.y -= (fly && !e.onGround ? 11 : 26) * dt;
     if (jumpPressed && e.onGround) { e.vel.y = s.jump; if (e === player || e === riding) sfx.jump(); }
-    else if (s.fly && jumpHeld && !e.onGround) e.vel.y = Math.min(7.5, e.vel.y + 42 * dt);
+    else if (fly && jumpHeld && !e.onGround) e.vel.y = Math.min(7.5, e.vel.y + 42 * dt);
     if (s.glide && jumpHeld && e.vel.y < -1.8) e.vel.y = -1.8;
     if (e.vel.y < -20) e.vel.y = -20;
   }
@@ -603,6 +605,46 @@ function hatchBaby(p) {
   scene.add(b.g); addShadow(baby); burst(p.clone().add(new T.Vector3(0, 1, 0)), 60, null, 3, 5);
 }
 
+/* ---------- June Bug the dog ---------- */
+const dappleTex = canvasTex(32, g => {
+  g.fillStyle = '#8e9197'; g.fillRect(0, 0, 32, 32);
+  for (let i = 0; i < 16; i++) { g.fillStyle = i % 3 ? '#1d1d20' : '#55585e'; g.beginPath(); g.ellipse(trng() * 32, trng() * 32, 1 + trng() * 3.5, 1 + trng() * 2.5, trng() * 3, 0, 7); g.fill(); }
+  g.fillStyle = '#d9dadd'; for (let i = 0; i < 70; i++) g.fillRect(trng() * 32, trng() * 32, 1, 1);
+});
+function nameTag(text) {
+  const t = canvasTex(256, g => { g.font = '800 56px "Baloo 2", "Arial Rounded MT Bold", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 12; g.strokeStyle = '#3a2352'; g.strokeText(text, 128, 128); g.fillStyle = '#fff'; g.fillText(text, 128, 128); });
+  const sp = new T.Sprite(new T.SpriteMaterial({ map: t, transparent: true, depthWrite: false })); sp.scale.set(1.1, 1.1, 1); return sp;
+}
+function buildDog() {
+  const g = new T.Group(), parts = { legs: [], wings: [] }, dp = texMat(dappleTex), WH = 0xfafafa, TAN = 0xc98a4b, BK = 0x1d1d20;
+  box(g, .3, .22, .8, 0, .36, 0, dp); box(g, .28, .1, .78, 0, .23, 0, WH);
+  box(g, .31, .2, .16, 0, .38, .12, BK); box(g, .31, .21, .2, 0, .375, -.12, BK); box(g, .31, .24, .14, 0, .34, .36, WH);
+  for (const [x, z] of [[-.1, .3], [.1, .3], [-.1, -.3], [.1, -.3]]) { const l = pivot(g, x, .2, z); box(l, .09, .2, .09, 0, -.1, 0, WH); box(l, .1, .04, .11, 0, -.18, .01, 0xe9e9ee); parts.legs.push(l); }
+  box(g, .2, .22, .18, 0, .52, .38, WH); box(g, .23, .06, .21, 0, .55, .39, 0xf0553c); box(g, .06, .08, .02, 0, .47, .5, 0xc75a8e);
+  const head = parts.head = pivot(g, 0, .7, .46);
+  box(head, .26, .22, .24, 0, 0, 0, dp); box(head, .265, .1, .12, 0, -.06, .05, TAN);
+  box(head, .15, .13, .2, 0, -.05, .2, WH); box(head, .08, .06, .05, 0, -.01, .31, BK); box(head, .05, .2, .02, 0, .02, .122, WH);
+  for (const s of [-1, 1]) {
+    box(head, .06, .06, .02, s * .075, .02, .124, 0x2a1a12); box(head, .02, .02, .02, s * .085, .035, .132, 0xffffff); box(head, .07, .03, .02, s * .075, .075, .124, TAN);
+    const ear = pivot(head, s * .14, .09, -.03); box(ear, .05, .26, .17, s * .02, -.13, 0, dp); box(ear, .052, .1, .15, s * .02, -.21, 0, BK); ear.rotation.z = s * .12;
+  }
+  const tail = parts.tail = pivot(g, 0, .44, -.4); const tl = box(tail, .05, .05, .32, 0, .08, -.14, WH); tl.rotation.x = .6;
+  const tag = nameTag('June Bug'); tag.position.y = 1.05; g.add(tag);
+  g.scale.setScalar(1.2);
+  return { g, parts };
+}
+let dog = null;
+function follow(e, dt, gap, time) {
+  const b = body(), dx = b.pos.x - e.pos.x, dz = b.pos.z - e.pos.z, d = Math.hypot(dx, dz), dy = b.pos.y - e.pos.y;
+  if (d > 40 || (b.onGround && Math.abs(dy) > 7 && d < 30)) { if (b.onGround) e.pos.set(b.pos.x + 1.4, b.pos.y + .3, b.pos.z + gap * .5); else e.pos.copy(spot(b.pos.x + 2, b.pos.z + 2)); e.vel.set(0, 0, 0); }
+  const go = d > gap + b.stats.hw; drive(e, dt, go ? dx / d : 0, go ? dz / d : 0, false, false, d > 6, false);
+  e.ph += dt * (4 + Math.hypot(e.vel.x, e.vel.z) * 2.2); const s = Math.sin(e.ph) * (go ? .75 : 0);
+  e.parts.legs.forEach((l, i) => { l.rotation.x = (i === 0 || i === 3) ? s : -s; });
+  e.parts.tail.rotation.y = Math.sin(time * (e === dog ? 14 : 5)) * (e === dog ? .5 : .3);
+  if (!go && d > .1) e.yaw = lerpAngle(e.yaw, Math.atan2(dx, dz), Math.min(1, 4 * dt));
+  e.group.position.copy(e.pos); e.group.rotation.y = e.yaw; placeShadow(e);
+}
+
 /* ---------- missions ---------- */
 const S = { stars: 0, placed: 0, rings: 0, base: 0, flag: false };
 const body = () => riding || player;
@@ -619,7 +661,7 @@ const MISSIONS = [
   { t: () => `Zoom through the rainbow rings in town 🌈 ${S.rings}/6 (try a car!)`, start() { S.rings = 0; rings.forEach(r => r.visible = true); setMarker(null); },
     tick() { const b = body(); for (const r of rings) if (r.visible && Math.hypot(b.pos.x - r.position.x, b.pos.y + b.stats.h / 2 - r.position.y, b.pos.z - r.position.z) < 2.4) { r.visible = false; S.rings++; sfx.star(); burst(r.position, 40, null, 4, 4); } },
     done: () => S.rings >= 6 },
-  { t: () => 'Fly a pterodactyl up to the cloud island ☁️', start() { setMarker(new T.Vector3(CLOUD.x, hAt(CLOUD.x, CLOUD.z), CLOUD.z)); }, done: () => near(CLOUD, 8) && body().pos.y >= 28.5 },
+  { t: () => 'Fly up to the cloud island ☁️ (unicorn wings or a pterodactyl)', start() { setMarker(new T.Vector3(CLOUD.x, hAt(CLOUD.x, CLOUD.z), CLOUD.z)); }, done: () => near(CLOUD, 8) && body().pos.y >= 28.5 },
   { t: () => `Build something! Place 10 blocks 🧱 ${Math.min(10, S.placed - S.base)}/10`, start() { S.base = S.placed; setMarker(null); }, done: () => S.placed - S.base >= 10 },
   { t: () => item && item.held ? 'Bring the egg to the nest in Dino Valley 🥚' : 'Find the lost dino egg on the beach 🥚',
     start() { eggPos = findBeach(); spawnItem('egg', eggPos); setMarker(eggPos); S.flag = false; },
@@ -645,6 +687,7 @@ if (save) {
   if (MISSIONS[mi].start) MISSIONS[mi].start();
   if (mi > 7) hatchBaby(spot(player.pos.x + 2, player.pos.z + 2));
 }
+{ const d = buildDog(); dog = { stats: STATS.dog, group: d.g, parts: d.parts, pos: new T.Vector3(player.pos.x + 1.3, player.pos.y + .2, player.pos.z - .6), vel: new T.Vector3(), yaw: Math.PI, onGround: false, ph: 0 }; scene.add(d.g); addShadow(dog); }
 function writeSave() {
   if (wiped || !started) return;
   try {
@@ -669,6 +712,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'Space') input.jumpPressed = true;
   if (e.code === 'KeyE') rideAction();
   if (e.code === 'KeyC') toggleOutfit();
+  if (e.code === 'KeyQ') flyAction();
   if (e.code === 'KeyF') breakBlock();
   if (e.code === 'KeyR') placeBlock();
   if (/^Digit[1-9]$/.test(e.code)) selectSlot(+e.code[5] - 1);
@@ -713,7 +757,7 @@ function press(id, down, up) {
   el.addEventListener('mousedown', e => { e.preventDefault(); down(); }); el.addEventListener('mouseup', () => { if (up) up(); });
 }
 press('tJump', () => { input.jumpHeld = true; input.jumpPressed = true; }, () => { input.jumpHeld = false; });
-press('tRide', rideAction); press('tBreak', breakBlock); press('tPlace', placeBlock);
+press('tRide', rideAction); press('tFly', flyAction); press('tBreak', breakBlock); press('tPlace', placeBlock);
 $('bOutfit').addEventListener('click', () => { toggleOutfit(); canvas.focus(); });
 $('bSound').addEventListener('click', () => { soundOn = !soundOn; $('bSound').textContent = soundOn ? '🔊' : '🔇'; canvas.focus(); });
 $('bSound').textContent = soundOn ? '🔊' : '🔇'; $('bMusic').classList.toggle('off', !musicOn);
@@ -728,8 +772,8 @@ if (window.LOGO_SRC) { $('logoImg').src = window.LOGO_SRC; $('sponsor').hidden =
 $('bHelp').addEventListener('click', () => { if (locked()) document.exitPointerLock(); $('start').hidden = false; $('play').textContent = 'Keep playing'; });
 $('play').addEventListener('click', startGame);
 $('keys').innerHTML = (isTouch
-  ? [['Stick', 'Walk and run'], ['Drag', 'Look around'], ['⬆️', 'Jump · hold to glide or fly'], ['🦄', 'Hop on or off a ride'], ['⛏️ 🧱', 'Break or place a block'], ['👗', 'Change outfit']]
-  : [['W A S D', 'Walk · Shift to run'], ['Mouse', 'Look around'], ['Space', 'Jump · hold to glide or fly'], ['E', 'Hop on or off a ride'], ['Click', 'Break a block (or F)'], ['Right-click', 'Place a block (or R)'], ['1–9', 'Pick a block'], ['C', 'Change outfit']]
+  ? [['Stick', 'Walk and run'], ['Drag', 'Look around'], ['⬆️', 'Jump · hold to glide or fly'], ['🦄', 'Hop on or off a ride'], ['🪽', 'Unicorn wings: fly!'], ['⛏️ 🧱', 'Break or place a block'], ['👗', 'Change outfit']]
+  : [['W A S D', 'Walk · Shift to run'], ['Mouse', 'Look around'], ['Space', 'Jump · hold to glide or fly'], ['E', 'Hop on or off a ride'], ['Q', 'Unicorn wings: fly!'], ['Click', 'Break a block (or F)'], ['Right-click', 'Place a block (or R)'], ['1–9', 'Pick a block'], ['C', 'Change outfit']]
 ).map(r => `<b>${r[0]}</b><span>${r[1]}</span>`).join('');
 if (isTouch) $('touch').hidden = false;
 function startGame() { initAudio(); $('start').hidden = true; if (!started) { started = true; camYaw = 0; camPitch = .3; sfx.ride(); } canvas.focus(); }
@@ -761,13 +805,20 @@ function rideAction() {
       if (!collides(x, m.pos.y + dy, z, .3, 1.6)) { player.pos.set(x, m.pos.y + dy, z); placed = true; }
     }
     if (!placed) player.pos.set(m.pos.x, m.pos.y + s.h + .1, m.pos.z);
-    player.vel.set(0, 3, 0); player.yaw = m.yaw; m.carSpeed = 0; m.home.copy(m.pos); sfx.pop();
+    player.vel.set(0, 3, 0); player.yaw = m.yaw; m.carSpeed = 0; m.flying = false; m.home.copy(m.pos); sfx.pop();
     return;
   }
   const m = nearestMount(); if (!m) return;
   riding = m; m.group.add(player.group); player.group.position.set(0, m.stats.seat[0] - .5, m.stats.seat[1]); player.group.rotation.y = 0;
   m.vel.set(0, 0, 0); sfx.ride(); burst(m.pos.clone().add(new T.Vector3(0, m.stats.h, 0)), 30, null, 3);
-  if (!hinted[m.kind]) { hinted[m.kind] = 1; toast(m.kind === 'unicorn' ? 'Hold jump in the air to rainbow-glide! 🌈' : m.kind === 'ptero' ? 'Hold jump to flap and fly! 🪽' : m.kind === 'car' ? 'Vroom! Steer left and right 🚗' : m.kind === 'rex' ? 'Stomp stomp! 🦖' : 'So tall! 🦕'); }
+  if (!hinted[m.kind]) { hinted[m.kind] = 1; toast(m.kind === 'unicorn' ? (isTouch ? 'Tap 🪽 for wings, then hold jump to fly!' : 'Press Q for wings, then hold Space to fly!') : m.kind === 'ptero' ? 'Hold jump to flap and fly! 🪽' : m.kind === 'car' ? 'Vroom! Steer left and right 🚗' : m.kind === 'rex' ? 'Stomp stomp! 🦖' : 'So tall! 🦕'); }
+}
+
+function flyAction() {
+  if (!started || !riding || riding.kind !== 'unicorn') return;
+  const m = riding; m.flying = !m.flying; sfx.ride();
+  burst(m.pos.clone().add(new T.Vector3(0, 1.4, 0)), 40, null, 4, 4);
+  if (m.flying) { if (m.onGround) m.vel.y = 10; toast('Wings out! Hold jump to fly up 🦄'); } else toast('Wings away!');
 }
 
 /* ---------- building ---------- */
@@ -806,7 +857,7 @@ function placeBlock() {
   const x = target.x + target.n[0], y = target.y + target.n[1], z = target.z + target.n[2];
   if (x < 0 || z < 0 || x >= W || z >= D || y < 1 || y >= H - 2 || getB(x, y, z)) return;
   const hits = e => { const s = e.stats, p = e.pos; return x + 1 > p.x - s.hw && x < p.x + s.hw && z + 1 > p.z - s.hw && z < p.z + s.hw && y + 1 > p.y && y < p.y + s.h; };
-  if (hits(body()) || mounts.some(hits) || (baby && hits(baby))) return;
+  if (hits(body()) || mounts.some(hits) || (baby && hits(baby)) || (dog && hits(dog))) return;
   setBlock(x, y, z, HOTBAR[slot]); S.placed++; sfx.pop();
 }
 
@@ -838,7 +889,7 @@ function animMount(m, dt) {
   else if (P.legs.length === 2) { P.legs[0].rotation.x = s; P.legs[1].rotation.x = -s; }
   if (P.tail) P.tail.rotation.y = Math.sin(m.ph * .7) * .25;
   if (P.head) P.head.rotation.x = Math.sin(m.ph * .5) * .05;
-  if (P.wings) { const f = m.onGround ? .15 : Math.sin(clock.elapsedTime * 11) * .65; P.wings[0].rotation.z = -f; P.wings[1].rotation.z = f; }
+  if (P.wings.length) { if (m.kind === 'unicorn') for (const w of P.wings) w.visible = !!m.flying; const f = m.onGround ? .15 : Math.sin(clock.elapsedTime * 11) * .65; P.wings[0].rotation.z = -f; P.wings[1].rotation.z = f; }
   if (P.wheels) for (const w of P.wheels) w.rotation.x += m.carSpeed * dt / .33;
   m.group.position.copy(m.pos); m.group.rotation.y = m.yaw;
   if (m.kind === 'unicorn' && m === riding && sp > 6 && Math.random() < .7) burst(new T.Vector3(m.pos.x - Math.sin(m.yaw) * .8, m.pos.y + 1.1, m.pos.z - Math.cos(m.yaw) * .8), 1, null, .6, 1);
@@ -898,14 +949,8 @@ function frame() {
   }
   for (const m of mounts) { if (m !== riding) { if (m.stats.car) { m.vel.x = m.vel.z = 0; m.carSpeed = 0; drive(m, dt, 0, 0, false, false, false, true); } else wander(m, dt); } animMount(m, dt); placeShadow(m); }
   animGirl(dt); placeShadow(player, !!riding);
-  if (baby) {
-    const b = body(), dx = b.pos.x - baby.pos.x, dz = b.pos.z - baby.pos.z, d = Math.hypot(dx, dz);
-    if (d > 40) baby.pos.copy(spot(b.pos.x + 2, b.pos.z + 2));
-    const go = d > 2.6 + b.stats.hw; drive(baby, dt, go ? dx / d : 0, go ? dz / d : 0, false, false, d > 8, false);
-    baby.ph += dt * (3 + Math.hypot(baby.vel.x, baby.vel.z) * 2); const s = Math.sin(baby.ph) * (go ? .7 : 0);
-    baby.parts.legs[0].rotation.x = s; baby.parts.legs[1].rotation.x = -s; baby.parts.tail.rotation.y = Math.sin(time * 5) * .3;
-    baby.group.position.copy(baby.pos); baby.group.rotation.y = baby.yaw; placeShadow(baby);
-  }
+  if (baby) follow(baby, dt, 3.6, time);
+  if (dog) follow(dog, dt, 2, time);
 
   // stars, items, missions
   const b = body();
@@ -913,7 +958,7 @@ function frame() {
     if (!st.visible) continue;
     st.rotation.y = time * 2; st.position.y += Math.sin(time * 3 + st.position.x) * .003;
     if (started && Math.abs(st.position.x - b.pos.x) < b.stats.hw + 1.1 && Math.abs(st.position.z - b.pos.z) < b.stats.hw + 1.1 && st.position.y > b.pos.y - 1 && st.position.y < b.pos.y + b.stats.h + 1.2) {
-      st.visible = false; S.stars++; $('starN').textContent = S.stars; sfx.star(); burst(st.position, 26, 0xffe14d, 3, 4);
+      st.visible = false; S.stars++; $('starN').textContent = S.stars; sfx.star(); if (dog && dog.onGround) { dog.vel.y = 6; tone(900, .07, 'square', .04, .15, 1300); } burst(st.position, 26, 0xffe14d, 3, 4);
     }
   }
   if (item) {
@@ -926,7 +971,8 @@ function frame() {
 
   // prompt
   let pr = '';
-  if (started) { if (riding) pr = isTouch ? '' : 'E — hop off'; else { const m = nearestMount(); if (m) pr = (isTouch ? 'Tap 🦄 to ride the ' : 'E — ride the ') + (m.label || m.stats.label) + ' ' + (m.emoji || m.stats.emoji); } }
+  if (started) { if (riding) pr = isTouch ? '' : 'E — hop off' + (riding.kind === 'unicorn' ? (riding.flying ? ' · Q — wings away' : ' · Q — wings') : ''); else { const m = nearestMount(); if (m) pr = (isTouch ? 'Tap 🦄 to ride the ' : 'E — ride the ') + (m.label || m.stats.label) + ' ' + (m.emoji || m.stats.emoji); } }
+  $('tFly').hidden = !(riding && riding.kind === 'unicorn');
   if (pr !== promptShown) { promptShown = pr; $('prompt').textContent = pr; $('prompt').hidden = !pr; }
 
   // camera
@@ -956,6 +1002,6 @@ function drawMap(b, time) {
   g.save(); g.translate(b.pos.x, b.pos.z); g.rotate(-yaw); g.fillStyle = '#fff'; g.strokeStyle = '#3a2352'; g.lineWidth = 1.5;
   g.beginPath(); g.moveTo(0, 6); g.lineTo(4.5, -4.5); g.lineTo(0, -2); g.lineTo(-4.5, -4.5); g.closePath(); g.fill(); g.stroke(); g.restore();
 }
-window.__game = { player, mounts, S, startGame, rideAction, get riding() { return riding; }, setCam(y, p) { camYaw = y; camPitch = p; }, toggleOutfit, input };
+window.__game = { dog, flyAction, player, mounts, S, startGame, rideAction, get riding() { return riding; }, setCam(y, p) { camYaw = y; camPitch = p; }, toggleOutfit, input };
 frame();
 })();
