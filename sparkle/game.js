@@ -18,7 +18,7 @@ const BL = { // id: [top colour, side colour]
   10: [0xffd84d, 0x50505a], 11: [0xff8fb8, 0xff8fb8], 12: [0xffffff, 0xf4f4fa], 13: [0xffffff, 0xffffff],
   14: [0xd9a066, 0xcf9558], 15: [0xbfe9ff, 0xbfe9ff], 16: [0xb388ff, 0xb388ff], 18: [0xffd700, 0xf5c400],
   19: [0x5fd3c4, 0x5fd3c4], 20: [0xff5a5a, 0xff5a5a], 21: [0xffe066, 0xffe066], 22: [0x6fa8ff, 0x6fa8ff],
-  23: [0xffa64d, 0xffa64d], 24: [0x5fd35f, 0x5fd35f], 25: [0x555560, 0x555560],
+  23: [0xffa64d, 0xffa64d], 24: [0x5fd35f, 0x5fd35f], 26: [0x4b4fc9, 0x4b4fc9], 25: [0x555560, 0x555560],
 };
 const RAINBOW = [0xff5a5a, 0xffa64d, 0xffe066, 0x5fd35f, 0x6fa8ff, 0xb388ff];
 const HOTBAR = [11, 13, 12, 16, 22, 21, 1, 14, 18];
@@ -73,8 +73,8 @@ function genWorld() {
   }
   // rainbow arch in the unicorn meadow
   for (let dx = -13; dx <= 13; dx++) for (let dy = 0; dy <= 13; dy++) {
-    const r = Math.hypot(dx, dy); if (r < 7 || r >= 13) continue;
-    const b = [20, 23, 21, 24, 22, 16][Math.floor(13 - r)];
+    const r = Math.hypot(dx, dy); if (r < 6 || r >= 13) continue;
+    const b = [20, 23, 21, 24, 22, 26, 16][Math.floor(13 - r)]; // red, orange, yellow, green, blue, indigo, violet
     for (const z of [104, 105]) { setRaw(28 + dx, 9 + dy, z, b); mark(28 + dx, z, 1); }
   }
   // cloud island
@@ -325,20 +325,20 @@ const STATS = {
   dog: { speed: 9.5, jump: 9, hw: .24, h: .6 },
 };
 function eye(parent, x, y, z, s) { for (const sd of [-1, 1]) { box(parent, .04, s, s, sd * x, y, z, 0xffffff); box(parent, .05, s * .55, s * .55, sd * (x + .01), y - s * .1, z + s * .1, 0x1b1b2f); } }
-function buildUnicorn(c) {
+function buildUnicorn(c, mane) {
   const g = new T.Group(), parts = { legs: [], wings: [] };
   box(g, .6, .55, 1.25, 0, 1.05, 0, c);
   for (const s of [-1, 1]) { const w = pivot(g, s * .3, 1.3, .12); box(w, .9, .06, .55, s * .45, 0, 0, 0xffffff); box(w, .55, .06, .4, s * 1.1, 0, -.08, 0xffc9ec); box(w, .3, .06, .28, s * 1.5, 0, -.14, 0xc9b8ff); w.visible = false; parts.wings.push(w); }
   for (const [x, z] of [[-.2, .45], [.2, .45], [-.2, -.45], [.2, -.45]]) { const l = pivot(g, x, .8, z); box(l, .17, .72, .17, 0, -.36, 0, c); box(l, .19, .1, .19, 0, -.75, 0, 0xffb7dc); parts.legs.push(l); }
   const neck = pivot(g, 0, 1.15, .5); neck.rotation.x = .45; box(neck, .28, .75, .3, 0, .32, 0, c);
-  RAINBOW.forEach((rc, i) => box(neck, .1, .14, .16, 0, .08 + i * .12, -.2, rc));
+  for (let i = 0; i < 6; i++) box(neck, .1, .14, .16, 0, .08 + i * .12, -.2, mane);
   const head = parts.head = pivot(g, 0, 1.82, .82);
   box(head, .32, .32, .55, 0, 0, .12, c); box(head, .27, .22, .14, 0, -.04, .44, 0xffc9de);
   eye(head, .16, .04, .14, .11);
   for (const s of [-1, 1]) box(head, .08, .14, .06, s * .11, .22, -.08, c);
-  box(head, .1, .12, .14, 0, .2, .02, RAINBOW[5]);
+  box(head, .1, .12, .14, 0, .2, .02, mane);
   const horn = new T.Mesh(new T.ConeGeometry(.065, .45, 6), mat(0xffd23f)); horn.position.set(0, .36, .2); horn.rotation.x = .35; head.add(horn);
-  const tail = parts.tail = pivot(g, 0, 1.22, -.62); RAINBOW.forEach((rc, i) => box(tail, .13, .15, .15, 0, -i * .11, -.06 - i * .05, rc));
+  const tail = parts.tail = pivot(g, 0, 1.22, -.62); for (let i = 0; i < 6; i++) box(tail, .13, .15, .15, 0, -i * .11, -.06 - i * .05, mane);
   return { g, parts };
 }
 function buildRex(c, belly) {
@@ -457,14 +457,14 @@ function spot(x, z) { // nearest free land cell
   return new T.Vector3(x, hAt(x, z), z);
 }
 function addMount(kind, x, z, yaw, a, b) {
-  const built = STATS[kind].person ? buildAdult(a) : kind === 'unicorn' ? buildUnicorn(a) : kind === 'rex' ? buildRex(a, b) : kind === 'bronto' ? buildBronto(a, b) : kind === 'ptero' ? buildPtero(a, b) : buildCar(a);
+  const built = STATS[kind].person ? buildAdult(a) : kind === 'unicorn' ? buildUnicorn(a, b) : kind === 'rex' ? buildRex(a, b) : kind === 'bronto' ? buildBronto(a, b) : kind === 'ptero' ? buildPtero(a, b) : buildCar(a);
   const e = { kind, stats: STATS[kind], group: built.g, parts: built.parts, pos: kind === 'car' ? new T.Vector3(x, hAt(x, z), z) : spot(x, z), vel: new T.Vector3(), yaw, onGround: false, ph: rng() * 6, carSpeed: 0, ai: { t: rng() * 3, moving: false, dx: 0, dz: 1 }, range: 10 };
   e.home = e.pos.clone(); scene.add(e.group); addShadow(e); mounts.push(e); return e;
 }
-const UC = [0xffffff, 0xffd9ee, 0xe6dcff, 0xfff6d6];
-addMount('unicorn', 72.5, 66.5, 0, UC[0]).range = 5;
-for (let i = 0; i < 6; i++) addMount('unicorn', MEADOW.x + Math.cos(i) * 7, MEADOW.z + 3 + Math.sin(i) * 6, i, UC[i % 4]);
-addMount('unicorn', 100, 50, 1, UC[1]); addMount('unicorn', 44, 60, 2, UC[2]);
+const UC = [0xffffff, 0xffd9ee, 0xe6dcff, 0xfff6d6], MANE = [0xff6fb5, 0xa67bff, 0x4fc9c0, 0xffb84d];
+addMount('unicorn', 72.5, 66.5, 0, UC[0], MANE[0]).range = 5;
+for (let i = 0; i < 6; i++) addMount('unicorn', MEADOW.x + Math.cos(i) * 7, MEADOW.z + 3 + Math.sin(i) * 6, i, UC[i % 4], MANE[(i + 1) % 4]);
+addMount('unicorn', 100, 50, 1, UC[1], MANE[1]); addMount('unicorn', 44, 60, 2, UC[2], MANE[0]);
 addMount('rex', VALLEY.x - 7, VALLEY.z - 5, 0, 0x6fcf6f, 0xd8f5a2); addMount('rex', VALLEY.x + 5, VALLEY.z + 8, 2, 0xff9a76, 0xffe0b5); addMount('rex', 98, 96, 1, 0x4fc1e0, 0xc9f1ff).range = 5;
 const mama = addMount('bronto', VALLEY.x + 6, VALLEY.z - 1, -1.2, 0x9aa8ff, 0x7d88e8); mama.range = 3;
 addMount('bronto', VALLEY.x - 5, VALLEY.z + 8, 1, 0xc59bff, 0xa57be8);
