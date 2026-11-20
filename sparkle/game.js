@@ -132,6 +132,12 @@ function tree(x, z, pink) {
 }
 genWorld();
 
+/* ---------- saved progress ---------- */
+const SAVE_KEY = 'sparkle-island-v1';
+let save = null; try { save = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { /* no storage */ }
+const edits = (save && save.edits) || {};
+for (const k in edits) if (+k >= W * D && +k < blocks.length) blocks[+k] = edits[k];
+
 /* ---------- renderer / scene ---------- */
 const canvas = $('game');
 const renderer = new T.WebGLRenderer({ canvas, antialias: true });
@@ -208,7 +214,7 @@ function mapPixel(x, z) {
 for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) mapPixel(x, z);
 
 function setBlock(x, y, z, b) {
-  setRaw(x, y, z, b);
+  setRaw(x, y, z, b); edits[(y * D + z) * W + x] = b;
   const cx = Math.floor(x / CS), cz = Math.floor(z / CS), lx = x % CS, lz = z % CS;
   buildChunk(cx, cz);
   if (lx === 0 && cx > 0) buildChunk(cx - 1, cz); if (lx === CS - 1 && cx < NCX - 1) buildChunk(cx + 1, cz);
@@ -408,8 +414,18 @@ const mama = addMount('bronto', VALLEY.x + 6, VALLEY.z - 1, -1.2, 0x9aa8ff, 0x7d
 addMount('bronto', VALLEY.x - 5, VALLEY.z + 8, 1, 0xc59bff, 0xa57be8);
 addMount('ptero', VALLEY.x - 9, VALLEY.z + 2, 0, 0xffb347, 0xff8a5c); addMount('ptero', VALLEY.x + 2, VALLEY.z - 9, 3, 0x7fd6c2, 0x4bb8a3);
 addMount('ptero', 80, 97, 2, 0xff9ed2, 0xe670b0).range = 4; addMount('ptero', 50, 46, 2, 0xffe066, 0xffa64d).range = 5;
-const CARC = [0xff6fae, 0x36cfa9, 0xffd23f, 0x9b7bff, 0x5fa8ff, 0xff8a5c];
+const logoTex = window.LOGO_SRC ? new T.TextureLoader().load(window.LOGO_SRC) : null; if (logoTex) logoTex.colorSpace = T.SRGBColorSpace;
+function logoPlane(parent, w, x, y, z, ry) { if (!logoTex) return; const m = new T.Mesh(new T.PlaneGeometry(w, w * 381 / 1206), new T.MeshBasicMaterial({ map: logoTex })); m.position.set(x, y, z); m.rotation.y = ry; parent.add(m); }
+const CARC = [0x26262b, 0x36cfa9, 0xffd23f, 0x9b7bff, 0x5fa8ff, 0xff8a5c];
 [[66.5, 72.5, -Math.PI / 2], [60.5, 52.5, Math.PI / 2], [84.5, 92.5, -Math.PI / 2], [52.5, 64.5, 0], [92.5, 80.5, Math.PI], [72.5, 84.5, 0]].forEach((c, i) => addMount('car', c[0], c[1], c[2], CARC[i]));
+{ // the 24HR Flood Pros truck, parked by the start
+  const tr = mounts.find(m => m.kind === 'car'); tr.label = 'Flood Pros truck'; tr.emoji = '🛻';
+  box(tr.group, 1.36, .1, 2.56, 0, .62, 0, 0xe2622f); box(tr.group, 1.7, .62, .08, 0, 1.47, -1.2, 0x1c1c1c);
+  logoPlane(tr.group, 1.62, 0, 1.47, -1.245, Math.PI); logoPlane(tr.group, 1.62, 0, 1.47, -1.155, 0);
+  const bb = new T.Group(); bb.position.set(72.5, TOWN_Y, 49.5); scene.add(bb); // town billboard
+  box(bb, 9.6, 3.4, .3, 0, 5.2, 0, 0x1c1c1c); for (const sd of [-1, 1]) box(bb, .4, 3.6, .4, sd * 3.2, 1.8, 0, 0x8b5a2b);
+  logoPlane(bb, 9.2, 0, 5.2, .16, 0); logoPlane(bb, 9.2, 0, 5.2, -.16, Math.PI);
+}
 
 /* ---------- player ---------- */
 const player = { stats: STATS.player, pos: new T.Vector3(72.5, TOWN_Y, 72.5), vel: new T.Vector3(), yaw: Math.PI, onGround: false, ph: 0, group: new T.Group() };
@@ -484,7 +500,7 @@ function updateParticles(dt) {
 }
 
 /* ---------- sound ---------- */
-let AC = null, soundOn = true;
+let AC = null, soundOn = !(save && save.sound === false), musicOn = !(save && save.music === false), musicGain = null, nextT = 0, mstep = 0;
 function tone(f, d, type = 'sine', v = .1, delay = 0, f2) {
   if (!AC || !soundOn) return;
   const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
@@ -501,7 +517,27 @@ const sfx = {
   win: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, .2, 'triangle', .12, i * .12)),
   stomp: () => tone(90, .25, 'sawtooth', .12, 0, 40),
 };
-function initAudio() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { /* no sound */ } } if (AC && AC.state === 'suspended') AC.resume(); }
+// background music: a gentle looping tune (C – G – Am – F), scheduled a little ahead of the clock
+const CH = [[261.63, 329.63, 392], [196, 246.94, 293.66], [220, 261.63, 329.63], [174.61, 220, 261.63]];
+const MEL = [659.25, 0, 783.99, 0, 659.25, 0, 523.25, 0, 587.33, 0, 783.99, 0, 587.33, 0, 0, 0, 523.25, 0, 659.25, 0, 880, 0, 659.25, 0, 880, 0, 783.99, 0, 698.46, 0, 0, 0,
+  783.99, 659.25, 523.25, 659.25, 783.99, 0, 1046.5, 0, 987.77, 0, 783.99, 0, 587.33, 0, 783.99, 0, 880, 0, 659.25, 0, 523.25, 0, 659.25, 0, 698.46, 0, 880, 0, 783.99, 0, 0, 0];
+function mnote(f, d, type, v, t) { const o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(v, t + .02); g.gain.exponentialRampToValueAtTime(.001, t + d); o.connect(g); g.connect(musicGain); o.start(t); o.stop(t + d + .03); }
+function musicTick() {
+  if (!AC || !musicGain || !musicOn || AC.state !== 'running') return;
+  if (nextT < AC.currentTime) nextT = AC.currentTime + .05;
+  while (nextT < AC.currentTime + .35) {
+    const s8 = mstep % 8, ch = CH[Math.floor(mstep / 8) % 4];
+    if (s8 % 4 === 0) mnote(ch[0] / 2, .55, 'triangle', .5, nextT);
+    mnote(ch[[0, 1, 2, 1, 0, 2, 1, 2][s8]], .24, 'sine', .22, nextT);
+    const m = MEL[mstep % MEL.length]; if (m) mnote(m, .36, 'triangle', .3, nextT);
+    nextT += .27; mstep++;
+  }
+}
+function initAudio() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); musicGain = AC.createGain(); musicGain.gain.value = .11; musicGain.connect(AC.destination); setInterval(musicTick, 100); } catch (e) { /* no sound */ } }
+  if (AC && AC.state === 'suspended') AC.resume();
+}
+document.addEventListener('visibilitychange', () => { if (!AC) return; if (document.hidden) AC.suspend(); else if (started) AC.resume(); });
 
 /* ---------- stars, markers, items ---------- */
 const starShape = new T.Shape();
@@ -522,6 +558,7 @@ addStar(28.5, 10.5, 105); addStar(22.5, 10.5, 105); addStar(34.5, 10.5, 105);
 for (const [dx, dz] of [[0, 0], [-5, 1], [5, -1], [2, 3], [-2, -3]]) addStar(36.5 + dx, 30.6, 36.5 + dz);
 addStar(126.5, hAt(126, 124) + 12, 124.5);
 const TOTAL_STARS = stars.length;
+if (save && save.got) for (const i of save.got) if (stars[i]) stars[i].visible = false;
 
 const beacon = new T.Mesh(new T.CylinderGeometry(1.3, 1.3, 80, 18, 1, true), new T.MeshBasicMaterial({ color: 0xffe14d, transparent: true, opacity: .28, depthWrite: false, side: T.DoubleSide, fog: false }));
 beacon.visible = false; scene.add(beacon);
@@ -599,6 +636,27 @@ function nextMission() {
 let toastT = 0;
 function toast(msg) { const el = $('toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 2200); }
 
+/* ---------- save / restore ---------- */
+let wiped = false;
+if (save) {
+  S.stars = save.stars | 0; S.placed = save.placed | 0; mi = clamp(save.mi | 0, 0, MISSIONS.length - 1); $('starN').textContent = S.stars;
+  if (save.pos) player.pos.set(save.pos[0], save.pos[1] + .2, save.pos[2]);
+  if (save.outfit) { outfit = 1; girls.forEach((g, i) => g.g.visible = i === 1); }
+  if (MISSIONS[mi].start) MISSIONS[mi].start();
+  if (mi > 7) hatchBaby(spot(player.pos.x + 2, player.pos.z + 2));
+}
+function writeSave() {
+  if (wiped || !started) return;
+  try {
+    const b = body();
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ stars: S.stars, placed: S.placed, mi, outfit, got: stars.map((s, i) => s.visible ? -1 : i).filter(i => i >= 0), edits,
+      pos: [+b.pos.x.toFixed(1), +b.pos.y.toFixed(1), +b.pos.z.toFixed(1)], music: musicOn, sound: soundOn }));
+  } catch (e) { /* storage unavailable: play on without saving */ }
+}
+setInterval(writeSave, 4000);
+window.addEventListener('pagehide', writeSave);
+document.addEventListener('visibilitychange', () => { if (document.hidden) writeSave(); });
+
 /* ---------- input ---------- */
 const keys = {}, input = { jx: 0, jz: 0, jumpHeld: false, jumpPressed: false };
 let started = false, camYaw = 0, camPitch = .35, lookedAt = 0;
@@ -658,6 +716,15 @@ press('tJump', () => { input.jumpHeld = true; input.jumpPressed = true; }, () =>
 press('tRide', rideAction); press('tBreak', breakBlock); press('tPlace', placeBlock);
 $('bOutfit').addEventListener('click', () => { toggleOutfit(); canvas.focus(); });
 $('bSound').addEventListener('click', () => { soundOn = !soundOn; $('bSound').textContent = soundOn ? '🔊' : '🔇'; canvas.focus(); });
+$('bSound').textContent = soundOn ? '🔊' : '🔇'; $('bMusic').classList.toggle('off', !musicOn);
+$('bMusic').addEventListener('click', () => { musicOn = !musicOn; $('bMusic').classList.toggle('off', !musicOn); initAudio(); canvas.focus(); });
+if (save) { $('play').textContent = 'Continue'; $('reset').hidden = false; }
+let resetArmed = false;
+$('reset').addEventListener('click', () => {
+  if (!resetArmed) { resetArmed = true; $('reset').textContent = 'Tap again to erase everything'; return; }
+  wiped = true; try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* nothing saved */ } location.reload();
+});
+if (window.LOGO_SRC) { $('logoImg').src = window.LOGO_SRC; $('sponsor').hidden = false; }
 $('bHelp').addEventListener('click', () => { if (locked()) document.exitPointerLock(); $('start').hidden = false; $('play').textContent = 'Keep playing'; });
 $('play').addEventListener('click', startGame);
 $('keys').innerHTML = (isTouch
@@ -859,7 +926,7 @@ function frame() {
 
   // prompt
   let pr = '';
-  if (started) { if (riding) pr = isTouch ? '' : 'E — hop off'; else { const m = nearestMount(); if (m) pr = (isTouch ? 'Tap 🦄 to ride the ' : 'E — ride the ') + m.stats.label + ' ' + m.stats.emoji; } }
+  if (started) { if (riding) pr = isTouch ? '' : 'E — hop off'; else { const m = nearestMount(); if (m) pr = (isTouch ? 'Tap 🦄 to ride the ' : 'E — ride the ') + (m.label || m.stats.label) + ' ' + (m.emoji || m.stats.emoji); } }
   if (pr !== promptShown) { promptShown = pr; $('prompt').textContent = pr; $('prompt').hidden = !pr; }
 
   // camera

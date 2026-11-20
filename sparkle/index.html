@@ -44,7 +44,7 @@ body {
 #mission { top: 48px; left: 0; max-width: min(62%, 420px); font-size: 16px; line-height: 1.25; border-left: 0; }
 #mission small { display: block; font-family: var(--body); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--pink); }
 #map { position: absolute; top: 0; right: 0; width: 112px; height: 112px; border-radius: 50%; border: 4px solid #fff; box-shadow: 0 3px 0 rgba(58, 35, 82, .2); background: #4fc3f7; }
-#topBtns { position: absolute; top: 126px; right: 0; display: flex; gap: 6px; pointer-events: auto; }
+#topBtns { position: absolute; top: 126px; right: 0; display: grid; grid-template-columns: 38px 38px; gap: 6px; pointer-events: auto; }
 button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
 .rb {
   width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--panel);
@@ -81,6 +81,10 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 #keys { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; text-align: left; margin: 0 auto 16px; font-size: 14px; width: fit-content; max-width: 100%; }
 #keys b { font-family: var(--display); color: var(--ink); background: #fff; border-radius: 8px; padding: 0 8px; text-align: center; box-shadow: 0 2px 0 rgba(58, 35, 82, .18); white-space: nowrap; }
 #play { font-family: var(--display); font-weight: 800; font-size: 26px; border: 0; border-radius: 999px; padding: 8px 44px; background: var(--pink); color: #fff; box-shadow: 0 5px 0 #c93a7d; }
+.rb.off { opacity: .45; }
+#reset { margin-top: 12px; border: 0; background: none; font-size: 13px; text-decoration: underline; color: var(--ink); padding: 4px 8px; }
+#sponsor { margin-top: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+#sponsor img { width: 200px; border-radius: 8px; display: block; }
 #play:active { transform: translateY(4px); box-shadow: 0 1px 0 #c93a7d; }
 @media (max-height: 460px) { #mission { top: 0; left: 96px; } #joy, #tbtns { bottom: 48px; } #card h1 { font-size: 34px; } }
 @media (prefers-reduced-motion: reduce) { #toast, .slot { transition: none; } }
@@ -96,6 +100,7 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
   <canvas id="map" width="144" height="144"></canvas>
   <div id="topBtns">
     <button class="rb" id="bOutfit" title="Change outfit (C)" aria-label="Change outfit">👗</button>
+    <button class="rb" id="bMusic" title="Music on or off" aria-label="Music on or off">🎵</button>
     <button class="rb" id="bSound" title="Sound on or off" aria-label="Sound on or off">🔊</button>
     <button class="rb" id="bHelp" title="How to play" aria-label="How to play">❓</button>
   </div>
@@ -119,9 +124,12 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
     <p>Ride unicorns, zoom around in toy cars, make friends with dinosaurs and build anything you like.</p>
     <div id="keys"></div>
     <button id="play">Play</button>
+    <div><button id="reset" hidden>Start a new game</button></div>
+    <div id="sponsor" hidden><span>Brought to you by</span><img id="logoImg" alt="24HR Flood Pros"></div>
   </div>
 </div>
 <script src="vendor/three.min.js"></script>
+<script src="logo.js"></script>
 <script src="game.js"></script>
 <!--BODY-END-->
 </body>
