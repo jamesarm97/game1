@@ -83,7 +83,7 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 #keys b { font-family: var(--display); color: var(--ink); background: #fff; border-radius: 8px; padding: 0 8px; text-align: center; box-shadow: 0 2px 0 rgba(58, 35, 82, .18); white-space: nowrap; }
 #play { font-family: var(--display); font-weight: 800; font-size: 26px; border: 0; border-radius: 999px; padding: 8px 44px; background: var(--pink); color: #fff; box-shadow: 0 5px 0 #c93a7d; }
 .rb.off { opacity: .45; }
-#reset { margin-top: 12px; border: 0; background: none; font-size: 13px; text-decoration: underline; color: var(--ink); padding: 4px 8px; }
+.link { margin-top: 12px; border: 0; background: none; font-size: 13px; text-decoration: underline; color: var(--ink); padding: 4px 8px; }
 #sponsor { margin-top: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
 #sponsor img { width: 200px; border-radius: 8px; display: block; }
 #play:active { transform: translateY(4px); box-shadow: 0 1px 0 #c93a7d; }
@@ -126,13 +126,13 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
     <p>Ride unicorns, zoom around in toy cars, make friends with dinosaurs and build anything you like. June Bug the dog comes along too.</p>
     <div id="keys"></div>
     <button id="play">Play</button>
-    <div><button id="reset" hidden>Start a new game</button></div>
+    <div><button id="gfx" class="link">Switch to HD graphics</button> <button id="reset" class="link" hidden>Start a new game</button></div>
     <div id="sponsor" hidden><span>Brought to you by</span><img id="logoImg" alt="24HR Flood Pros"></div>
   </div>
 </div>
 <script src="vendor/three.min.js"></script>
-<script src="logo.js?v=6"></script>
-<script src="game.js?v=6"></script>
+<script src="logo.js?v=7"></script>
+<script src="game.js?v=7"></script>
 <!--BODY-END-->
 </body>
 </html>

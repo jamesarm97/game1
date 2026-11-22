@@ -3,6 +3,10 @@
 'use strict';
 const T = THREE;
 const $ = id => document.getElementById(id);
+// Graphics mode: classic blocks, or HD (textures, soft shadows, sky and water shaders, smooth models)
+let gfxPref = null; try { gfxPref = localStorage.getItem('sparkle-gfx'); } catch (e) { /* no storage */ }
+const HD = location.hash === '#hd' || (location.hash !== '#classic' && gfxPref === 'hd');
+const LM = o => HD ? new T.MeshStandardMaterial(Object.assign({ roughness: .72, metalness: 0 }, o)) : new T.MeshLambertMaterial(o);
 const W = 144, D = 144, H = 40, CS = 16, SEA = 5.8, TOWN_Y = 8;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -150,8 +154,45 @@ scene.add(new T.HemisphereLight(0xffffff, 0xc9b6e6, 2.5));
 const sunL = new T.DirectionalLight(0xfff2cc, 1.1); sunL.position.set(.5, 1, .3); scene.add(sunL);
 const sun = new T.Mesh(new T.SphereGeometry(14, 16, 12), new T.MeshBasicMaterial({ color: 0xfff3a0, fog: false }));
 sun.position.set(150, 170, 90).add(new T.Vector3(72, 0, 72)); scene.add(sun);
-const water = new T.Mesh(new T.PlaneGeometry(900, 900), new T.MeshLambertMaterial({ color: 0x4fc3f7, transparent: true, opacity: .78 }));
+const water = new T.Mesh(new T.PlaneGeometry(900, 900), LM({ color: 0x4fc3f7, transparent: true, opacity: .78 }));
 water.rotation.x = -Math.PI / 2; water.position.set(72, SEA, 72); scene.add(water);
+const SUN_DIR = new T.Vector3(.5, .78, .38).normalize(); let skyDome = null, waterU = null;
+if (HD) {
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
+  renderer.toneMapping = T.NoToneMapping;
+  scene.fog = new T.Fog(0xa9d4fb, 90, 260);
+  scene.children.forEach(l => { if (l.isHemisphereLight) { l.intensity = 1.35; l.color.set(0xd6e9ff); l.groundColor.set(0x9aa67a); } });
+  sunL.intensity = 2.5; sunL.color.set(0xfff0d8); sunL.castShadow = true; sunL.shadow.mapSize.set(2048, 2048);
+  const sc = sunL.shadow.camera; sc.left = sc.bottom = -46; sc.right = sc.top = 46; sc.near = 1; sc.far = 240; sc.updateProjectionMatrix();
+  sunL.shadow.bias = -.0004; sunL.shadow.normalBias = .06; scene.add(sunL.target); sun.visible = false;
+  skyDome = new T.Mesh(new T.SphereGeometry(420, 32, 16), new T.ShaderMaterial({
+    side: T.BackSide, depthWrite: false, fog: false, uniforms: { sunDir: { value: SUN_DIR } },
+    vertexShader: 'varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `uniform vec3 sunDir; varying vec3 vDir;
+      void main(){ vec3 d = normalize(vDir); float h = max(d.y, 0.0);
+        vec3 c = mix(vec3(0.66, 0.83, 0.98), vec3(0.13, 0.42, 0.92), pow(h, 0.45));
+        float s = max(dot(d, sunDir), 0.0); c += vec3(1.0, 0.86, 0.62) * (pow(s, 420.0) * 4.0 + pow(s, 10.0) * 0.28);
+        gl_FragColor = vec4(c, 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }` }));
+  skyDome.renderOrder = -1; skyDome.frustumCulled = false; scene.add(skyDome);
+  waterU = { time: { value: 0 }, sunDir: { value: SUN_DIR }, camPos: { value: new T.Vector3() } };
+  water.material = new T.ShaderMaterial({ transparent: true, uniforms: waterU,
+    vertexShader: 'varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+    fragmentShader: `uniform float time; uniform vec3 sunDir; uniform vec3 camPos; varying vec3 vW;
+      float hgt(vec2 p){ return sin(p.x * 0.9 + time * 1.3) * 0.5 + sin(p.y * 1.1 - time * 1.1) * 0.5 + sin((p.x + p.y) * 2.3 + time * 2.0) * 0.25 + sin((p.x - p.y) * 3.7 - time * 2.6) * 0.12 + sin(p.x * 7.1 + p.y * 5.3 + time * 3.1) * 0.05; }
+      void main(){ vec2 p = vW.xz; float e = 0.12;
+        vec3 n = normalize(vec3((hgt(p - vec2(e, 0.0)) - hgt(p + vec2(e, 0.0))) * 0.35, 1.0, (hgt(p - vec2(0.0, e)) - hgt(p + vec2(0.0, e))) * 0.35));
+        vec3 v = normalize(camPos - vW); float fres = pow(1.0 - max(dot(n, v), 0.0), 4.0);
+        vec3 c = mix(vec3(0.03, 0.30, 0.42), vec3(0.62, 0.80, 0.97), clamp(fres, 0.0, 1.0));
+        float sp = pow(max(dot(reflect(-v, n), sunDir), 0.0), 240.0); c += vec3(1.0, 0.95, 0.8) * sp * 2.5;
+        c = mix(c, vec3(0.66, 0.83, 0.98), smoothstep(90.0, 260.0, length(camPos - vW)));
+        gl_FragColor = vec4(c, mix(0.74, 0.98, fres));
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }` });
+}
 function resize() { const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 window.addEventListener('resize', resize); resize();
 
@@ -165,11 +206,46 @@ for (const f of FACES) {
   const a = f.n.findIndex(v => v !== 0), u = (a + 1) % 3, v = (a + 2) % 3;
   f.ao = f.c.map(c => { const o = [c[0] ? 1 : -1, c[1] ? 1 : -1, c[2] ? 1 : -1]; const p1 = f.n.slice(), p2 = f.n.slice(), p3 = f.n.slice(); p1[u] += o[u]; p2[v] += o[v]; p3[u] += o[u]; p3[v] += o[v]; return [p1, p2, p3]; });
 }
-const chunkMat = new T.MeshLambertMaterial({ vertexColors: true });
+function makeAtlas() { // one detailed 128px tile per block face type (top = id*2, side = id*2+1)
+  const TS = 128, c = document.createElement('canvas'); c.width = c.height = 1024; const g = c.getContext('2d'), r = rngMaker(99);
+  const shade = (h, k) => { const f = v => Math.max(0, Math.min(255, Math.round(v * k))); return `rgb(${f((h >> 16) & 255)},${f((h >> 8) & 255)},${f(h & 255)})`; };
+  const speck = (col, n, a, sz) => { for (let i = 0; i < n; i++) { g.globalAlpha = a * (.4 + r() * .6); g.fillStyle = shade(col, r() < .5 ? .7 : 1.25); g.fillRect(r() * TS, r() * TS, 1 + r() * sz, 1 + r() * sz); } g.globalAlpha = 1; };
+  const blobs = (col, n, a, lo, hi) => { for (let i = 0; i < n; i++) { g.globalAlpha = a; g.fillStyle = shade(col, .6 + r() * .75); g.beginPath(); g.ellipse(r() * TS, r() * TS, lo + r() * (hi - lo), lo + r() * (hi - lo) * .7, r() * 3, 0, 7); g.fill(); } g.globalAlpha = 1; };
+  for (const id in BL) for (let k = 0; k < 2; k++) {
+    const t = id * 2 + k, col = +id === 13 ? 0xffffff : BL[id][k];
+    g.save(); g.translate((t % 8) * TS, Math.floor(t / 8) * TS); g.beginPath(); g.rect(0, 0, TS, TS); g.clip();
+    g.fillStyle = css(col); g.fillRect(0, 0, TS, TS);
+    switch (+id) {
+      case 1:
+        if (k === 0) { blobs(col, 60, .25, 4, 12); speck(col, 900, .55, 2); g.lineWidth = 1.5; for (let i = 0; i < 260; i++) { const x = r() * TS, y = r() * TS; g.globalAlpha = .5; g.strokeStyle = shade(col, r() < .5 ? .7 : 1.3); g.beginPath(); g.moveTo(x, y); g.lineTo(x + r() * 4 - 2, y - 3 - r() * 5); g.stroke(); } g.globalAlpha = 1; }
+        else { blobs(col, 30, .3, 3, 9); speck(col, 500, .45, 4); g.fillStyle = css(BL[1][0]); g.fillRect(0, 0, TS, 18); for (let x = 0; x < TS; x += 5) { g.fillStyle = shade(BL[1][0], .8 + r() * .4); g.beginPath(); g.moveTo(x - 1, 16); g.lineTo(x + 6, 16); g.lineTo(x + 2.5, 22 + r() * 16); g.fill(); } }
+        break;
+      case 2: case 4: blobs(col, 40, .2, 3, 10); speck(col, 700, .4, 3); blobs(col, 10, .35, 2, 4); break;
+      case 3: case 25: blobs(col, 40, .3, 6, 18); speck(col, 500, .35, 3); g.strokeStyle = shade(col, .5); g.lineWidth = 1.5; g.globalAlpha = .5; for (let i = 0; i < 5; i++) { let x = r() * TS, y = r() * TS; g.beginPath(); g.moveTo(x, y); for (let j = 0; j < 5; j++) { x += r() * 30 - 15; y += r() * 30 - 15; g.lineTo(x, y); } g.stroke(); } g.globalAlpha = 1; break;
+      case 6:
+        if (k === 1) { for (let x = 0; x < TS; x += 3) { g.globalAlpha = .15 + r() * .4; g.fillStyle = shade(col, r() < .6 ? .55 : 1.25); g.fillRect(x + r() * 2, 0, 1 + r() * 2.5, TS); } g.globalAlpha = 1; speck(col, 200, .3, 3); }
+        else { g.strokeStyle = shade(col, .65); g.lineWidth = 2; for (let q = 8; q < 90; q += 9) { g.globalAlpha = .5; g.beginPath(); g.arc(64, 64, q, 0, 7); g.stroke(); } g.globalAlpha = 1; }
+        break;
+      case 7: case 8: blobs(col, 300, .6, 4, 10); speck(col, 300, .4, 3); break;
+      case 9: speck(col, 1500, .4, 2); break;
+      case 10: if (k === 0) speck(col, 300, .25, 3); else speck(col, 1500, .4, 2); break;
+      case 11: for (let row = 0; row < 4; row++) for (let b = -1; b < 2; b++) { const x = b * 64 + (row % 2) * 32, y = row * 32; g.fillStyle = shade(col, .82 + r() * .3); g.fillRect(x + 2, y + 2, 60, 28); g.strokeStyle = shade(col, 1.35); g.lineWidth = 3; g.strokeRect(x, y, 64, 32); } speck(col, 300, .2, 2); break;
+      case 14: for (let row = 0; row < 4; row++) { g.fillStyle = shade(col, .88 + r() * .22); g.fillRect(0, row * 32, TS, 32); g.fillStyle = shade(col, .55); g.fillRect(0, row * 32, TS, 2); for (let i = 0; i < 9; i++) { g.globalAlpha = .25; g.fillRect(r() * TS, row * 32 + 4 + r() * 26, 20 + r() * 50, 1); } g.globalAlpha = 1; } break;
+      case 15: { g.fillStyle = shade(col, .78); g.fillRect(0, 0, TS, TS); g.fillStyle = css(col); g.fillRect(6, 6, TS - 12, TS - 12); g.globalAlpha = .45; g.fillStyle = '#fff'; g.beginPath(); g.moveTo(20, 100); g.lineTo(70, 16); g.lineTo(86, 16); g.lineTo(36, 100); g.fill(); g.beginPath(); g.moveTo(60, 108); g.lineTo(98, 44); g.lineTo(104, 44); g.lineTo(66, 108); g.fill(); g.globalAlpha = 1; break; }
+      case 16: case 20: for (let row = 0; row < 5; row++) for (let b = -1; b < 5; b++) { const x = b * 32 + (row % 2) * 16, y = row * 26; g.fillStyle = shade(col, .82 + r() * .3); g.beginPath(); g.moveTo(x, y); g.lineTo(x + 32, y); g.lineTo(x + 32, y + 18); g.quadraticCurveTo(x + 16, y + 34, x, y + 18); g.fill(); g.strokeStyle = shade(col, .55); g.lineWidth = 1.5; g.stroke(); } break;
+      case 18: { const gr = g.createLinearGradient(0, 0, TS, TS); gr.addColorStop(0, shade(col, 1.25)); gr.addColorStop(.5, shade(col, .85)); gr.addColorStop(1, shade(col, 1.2)); g.fillStyle = gr; g.fillRect(0, 0, TS, TS); speck(col, 200, .3, 3); g.strokeStyle = shade(col, .7); g.lineWidth = 4; g.strokeRect(2, 2, TS - 4, TS - 4); break; }
+      default: blobs(col, 25, .12, 8, 20); speck(col, 400, .18, 4);
+    }
+    g.restore();
+  }
+  const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+const UVC = [[0, 0], [1, 0], [1, 1], [0, 1]];
+const chunkMat = LM(HD ? { vertexColors: true, map: makeAtlas(), roughness: .9 } : { vertexColors: true });
 const NCX = W / CS, NCZ = D / CS, chunks = [];
 const tmpC = new T.Color();
 function buildChunk(cx, cz) {
-  const pos = [], col = [], nor = [], ind = [];
+  const pos = [], col = [], nor = [], ind = [], uv = [];
   for (let z = cz * CS; z < cz * CS + CS; z++) for (let x = cx * CS; x < cx * CS + CS; x++) for (let y = 0; y < H; y++) {
     const b = blocks[(y * D + z) * W + x]; if (!b) continue;
     const jit = .93 + .14 * hash2(x * 1.7 + y * 3.1, z * 2.3 + y);
@@ -179,13 +255,16 @@ function buildChunk(cx, cz) {
       if (y === 0 && fi === 3) continue;
       let r, g, bl;
       if (b === 13) { tmpC.setHSL(((x + y + z) % 12) / 12, .95, .62); r = tmpC.r; g = tmpC.g; bl = tmpC.b; }
+      else if (HD) r = g = bl = 1;
       else { const c = LIN[b][fi === 2 ? 0 : 1]; r = c[0]; g = c[1]; bl = c[2]; }
+      const tile = b * 2 + (fi === 2 ? 0 : 1), tx = tile % 8, ty = Math.floor(tile / 8);
       const base = pos.length / 3, aos = [];
       for (let k = 0; k < 4; k++) {
         const c = f.c[k], o = f.ao[k];
         const s1 = getB(x + o[0][0], y + o[0][1], z + o[0][2]) ? 1 : 0, s2 = getB(x + o[1][0], y + o[1][1], z + o[1][2]) ? 1 : 0, s3 = getB(x + o[2][0], y + o[2][1], z + o[2][2]) ? 1 : 0;
         const ao = (s1 && s2) ? 0 : 3 - (s1 + s2 + s3); aos.push(ao);
-        const sh = f.s * jit * (.62 + .38 * ao / 3);
+        const sh = HD ? .45 + .55 * ao / 3 : f.s * jit * (.62 + .38 * ao / 3);
+        if (HD) uv.push((tx + .02 + UVC[k][0] * .96) / 8, 1 - (ty + .98 - UVC[k][1] * .96) / 8);
         pos.push(x + c[0], y + c[1], z + c[2]); col.push(r * sh, g * sh, bl * sh); nor.push(n[0], n[1], n[2]);
       }
       if (aos[0] + aos[2] >= aos[1] + aos[3]) ind.push(base, base + 1, base + 2, base, base + 2, base + 3);
@@ -196,10 +275,11 @@ function buildChunk(cx, cz) {
   g.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
   g.setAttribute('color', new T.Float32BufferAttribute(col, 3));
   g.setAttribute('normal', new T.Float32BufferAttribute(nor, 3));
+  if (HD) g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2));
   g.setIndex(ind);
   const i = cx + cz * NCX;
   if (chunks[i]) { chunks[i].geometry.dispose(); chunks[i].geometry = g; }
-  else { chunks[i] = new T.Mesh(g, chunkMat); scene.add(chunks[i]); }
+  else { chunks[i] = new T.Mesh(g, chunkMat); chunks[i].castShadow = chunks[i].receiveShadow = HD; scene.add(chunks[i]); }
 }
 for (let cz = 0; cz < NCZ; cz++) for (let cx = 0; cx < NCX; cx++) buildChunk(cx, cz);
 
@@ -224,18 +304,26 @@ function setBlock(x, y, z, b) {
 
 /* ---------- model helpers ---------- */
 const matCache = {};
-const mat = c => matCache[c] || (matCache[c] = new T.MeshLambertMaterial({ color: c }));
+const mat = c => matCache[c] || (matCache[c] = LM({ color: c }));
 const boxGeo = {};
+function roundedBox(w, h, d) { // box with soft, smoothly shaded edges
+  const r = Math.min(w, h, d) * .34, g = new T.BoxGeometry(w, h, d, 4, 4, 4), p = g.attributes.position, n = g.attributes.normal, hx = w / 2 - r, hy = h / 2 - r, hz = d / 2 - r;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i), cx = clamp(x, -hx, hx), cy = clamp(y, -hy, hy), cz = clamp(z, -hz, hz), l = Math.hypot(x - cx, y - cy, z - cz);
+    if (l > 1e-6) { const nx = (x - cx) / l, ny = (y - cy) / l, nz = (z - cz) / l; p.setXYZ(i, cx + nx * r, cy + ny * r, cz + nz * r); n.setXYZ(i, nx, ny, nz); }
+  }
+  return g;
+}
 function box(parent, w, h, d, x, y, z, c) {
-  const k = w + '|' + h + '|' + d, g = boxGeo[k] || (boxGeo[k] = new T.BoxGeometry(w, h, d));
+  const k = w + '|' + h + '|' + d, g = boxGeo[k] || (boxGeo[k] = HD ? roundedBox(w, h, d) : new T.BoxGeometry(w, h, d));
   const m = new T.Mesh(g, typeof c === 'number' ? mat(c) : c); m.position.set(x, y, z); parent.add(m); return m;
 }
 function pivot(parent, x, y, z) { const g = new T.Group(); g.position.set(x, y, z); parent.add(g); return g; }
 function canvasTex(size, draw) {
-  const c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size);
-  const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t;
+  const q = HD ? Math.min(4, 512 / size) : 1, c = document.createElement('canvas'); c.width = c.height = size * q; const g = c.getContext('2d'); g.scale(q, q); draw(g, size);
+  const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; if (HD) t.anisotropy = 4; return t;
 }
-const texMat = t => new T.MeshLambertMaterial({ map: t });
+const texMat = t => LM({ map: t });
 const trng = rngMaker(7);
 
 /* ---------- the girl ---------- */
@@ -382,7 +470,7 @@ function buildPtero(c, c2) {
 function buildCar(c) {
   const g = new T.Group(), parts = { legs: [], wings: [], wheels: [] };
   box(g, 1.3, .4, 2.5, 0, .52, 0, c); box(g, 1.3, .26, .85, 0, .84, .8, c); box(g, 1.3, .26, .5, 0, .84, -1.0, c);
-  box(g, 1.2, .42, .06, 0, 1.12, .38, new T.MeshLambertMaterial({ color: 0xcfefff, transparent: true, opacity: .55 }));
+  box(g, 1.2, .42, .06, 0, 1.12, .38, LM({ color: 0xcfefff, transparent: true, opacity: .55 }));
   box(g, 1.05, .55, .16, 0, .98, -.72, 0xffffff);
   for (const s of [-1, 1]) { box(g, .26, .16, .06, s * .42, .84, 1.24, 0xfff3a0); box(g, .22, .12, .05, s * .45, .84, -1.26, 0xff5a5a); }
   box(g, 1.34, .08, 2.54, 0, .36, 0, 0xffffff);
@@ -446,7 +534,7 @@ function buildAdult(o) {
   return { g, parts };
 }
 const blobGeo = new T.CircleGeometry(1, 16), blobMat = new T.MeshBasicMaterial({ color: 0x1b1030, transparent: true, opacity: .22, depthWrite: false });
-function addShadow(e) { const m = new T.Mesh(blobGeo, blobMat); m.rotation.x = -Math.PI / 2; m.scale.setScalar(e.stats.hw * 1.7); scene.add(m); e.shadow = m; }
+function addShadow(e) { const m = new T.Mesh(blobGeo, blobMat); m.rotation.x = -Math.PI / 2; m.scale.setScalar(e.stats.hw * 1.7); scene.add(m); e.shadow = m; if (HD) e.group.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = true; }); }
 
 const mounts = [];
 function spot(x, z) { // nearest free land cell
@@ -619,8 +707,8 @@ document.addEventListener('visibilitychange', () => { if (!AC) return; if (docum
 /* ---------- stars, markers, items ---------- */
 const starShape = new T.Shape();
 for (let i = 0; i < 10; i++) { const r = i % 2 ? .23 : .52, a = i / 10 * Math.PI * 2 + Math.PI / 2; starShape[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r); }
-const starGeo = new T.ExtrudeGeometry(starShape, { depth: .16, bevelEnabled: false }); starGeo.center();
-const starMat = new T.MeshLambertMaterial({ color: 0xffd633, emissive: 0x9a6a00 });
+const starGeo = new T.ExtrudeGeometry(starShape, HD ? { depth: .1, bevelEnabled: true, bevelThickness: .05, bevelSize: .05, bevelSegments: 3 } : { depth: .16, bevelEnabled: false }); starGeo.center();
+const starMat = LM(HD ? { color: 0xffd633, emissive: 0x7a4a00, metalness: .5, roughness: .3 } : { color: 0xffd633, emissive: 0x9a6a00 });
 const stars = [];
 function addStar(x, y, z) { const m = new T.Mesh(starGeo, starMat); m.position.set(x, y, z); scene.add(m); stars.push(m); }
 for (let i = 0, n = 0; i < 900 && n < 42; i++) {
@@ -665,10 +753,14 @@ const rings = [];
 });
 
 /* ---------- clouds ---------- */
-const clouds = [], cloudMat = new T.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: .92, fog: false });
+const puffGeo = new T.IcosahedronGeometry(1, 2), puffMat = new T.MeshStandardMaterial({ color: 0xffffff, roughness: 1, emissive: 0xa9bfd9, emissiveIntensity: .45, fog: false });
+const clouds = [], cloudMat = LM({ color: 0xffffff, transparent: true, opacity: .92, fog: false });
 for (let i = 0; i < 16; i++) {
   const g = new T.Group(); const n = 3 + Math.floor(rng() * 3);
-  for (let k = 0; k < n; k++) box(g, 5 + rng() * 6, 2 + rng() * 2, 4 + rng() * 4, k * 4 - n * 2, rng() * 1.5, rng() * 3, cloudMat);
+  for (let k = 0; k < n; k++) {
+    if (!HD) { box(g, 5 + rng() * 6, 2 + rng() * 2, 4 + rng() * 4, k * 4 - n * 2, rng() * 1.5, rng() * 3, cloudMat); continue; }
+    for (let j = 0; j < 3; j++) { const m = new T.Mesh(puffGeo, puffMat); m.scale.set(4 + rng() * 4, 2.2 + rng() * 2, 3.5 + rng() * 3.5); m.position.set(k * 4.5 - n * 2.2 + rng() * 3, rng() * 2, rng() * 6 - 3); g.add(m); }
+  }
   g.position.set(rng() * 300 - 80, 44 + rng() * 14, rng() * 300 - 80); scene.add(g); clouds.push(g);
 }
 
@@ -843,6 +935,8 @@ $('reset').addEventListener('click', () => {
   if (!resetArmed) { resetArmed = true; $('reset').textContent = 'Tap again to erase everything'; return; }
   wiped = true; try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* nothing saved */ } location.reload();
 });
+$('gfx').textContent = HD ? 'Switch to classic blocks' : 'Switch to HD graphics';
+$('gfx').addEventListener('click', () => { writeSave(); try { localStorage.setItem('sparkle-gfx', HD ? 'classic' : 'hd'); } catch (e) { /* the #hash below still switches */ } location.hash = HD ? 'classic' : 'hd'; location.reload(); });
 if (window.LOGO_SRC) { $('logoImg').src = window.LOGO_SRC; $('sponsor').hidden = false; }
 $('bHelp').addEventListener('click', () => { if (locked()) document.exitPointerLock(); $('start').hidden = false; $('play').textContent = 'Keep playing'; });
 $('play').addEventListener('click', startGame);
@@ -965,7 +1059,7 @@ function animMount(m, dt) {
   if (P.arms) {
     if (m === riding) { P.arms[0].rotation.set(-2.5, 0, .25); P.arms[1].rotation.set(-2.5, 0, -.25); }
     else { P.arms[0].rotation.set(-s, 0, 0); if (m.greet) P.arms[1].rotation.set(-2.9, 0, Math.sin(clock.elapsedTime * 9) * .35); else P.arms[1].rotation.set(s, 0, 0); }
-    P.bubble.visible = !!m.greet && m !== riding;
+    P.bubble.visible = !!m.greet && m !== riding && camera.position.distanceTo(m.pos) > 4;
     if (P.tag) P.tag.visible = !m.greet && m !== riding;
   }
   if (P.tail) P.tail.rotation.y = Math.sin(m.ph * .7) * .25;
@@ -976,7 +1070,7 @@ function animMount(m, dt) {
   if (m.kind === 'unicorn' && m === riding && sp > 6 && Math.random() < .7) burst(new T.Vector3(m.pos.x - Math.sin(m.yaw) * .8, m.pos.y + 1.1, m.pos.z - Math.cos(m.yaw) * .8), 1, null, .6, 1);
 }
 function placeShadow(e, hidden) {
-  const s = e.shadow; if (hidden) { s.visible = false; return; }
+  const s = e.shadow; if (hidden || HD) { s.visible = false; return; }
   let y = Math.floor(e.pos.y + .2); while (y > 0 && !getB(Math.floor(e.pos.x), y - 1, Math.floor(e.pos.z))) y--;
   s.visible = e.pos.y - y < 12; s.position.set(e.pos.x, Math.max(y, SEA) + .03, e.pos.z);
 }
@@ -1073,6 +1167,10 @@ function frame() {
   camera.position.copy(camPos); camera.lookAt(camT);
   player.group.visible = dist > 1.2 || !!riding;
 
+  if (HD) {
+    sunL.target.position.set(Math.round(b.pos.x), Math.round(b.pos.y), Math.round(b.pos.z)); sunL.position.copy(sunL.target.position).addScaledVector(SUN_DIR, 120);
+    skyDome.position.copy(camera.position); waterU.time.value = time; waterU.camPos.value.copy(camera.position);
+  }
   updateTarget(); updateParticles(dt);
   for (const c of clouds) { c.position.x += dt * 1.2; if (c.position.x > 240) c.position.x = -100; }
   drawMap(b, time);
