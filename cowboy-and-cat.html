@@ -1,0 +1,345 @@
+<title>The Cowboy and Cat</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rye&family=Andika:wght@400;700&display=swap">
+<style>
+/* Layout: one picture-book page at a time — framed illustration on top, big read-aloud text below, page-turn buttons at the foot. */
+:root{
+  --desk:#f3dcae;        /* sandy tabletop behind the book */
+  --paper:#fff8e8;       /* page */
+  --ink:#3a2313;         /* saddle-leather text */
+  --soft:#7a5a3c;        /* captions */
+  --chili:#b8391f;       /* accent: bandana red */
+  --chili-ink:#fff8e8;
+  --rule:#e2c48d;
+  --display:"Rye","Rockwell","Georgia",serif;
+  --body:"Andika","Comic Sans MS","Trebuchet MS",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--desk:#1b1830;--paper:#2a2542;--ink:#f6e9cf;--soft:#c5b596;--chili:#f0764f;--chili-ink:#23130c;--rule:#463f66;color-scheme:dark}
+}
+:root[data-theme="dark"]{--desk:#1b1830;--paper:#2a2542;--ink:#f6e9cf;--soft:#c5b596;--chili:#f0764f;--chili-ink:#23130c;--rule:#463f66;color-scheme:dark}
+
+body{background:var(--desk);color:var(--ink);font-family:var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 28px}
+.book{max-width:820px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.page{background:var(--paper);border:2px solid var(--rule);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:14px;animation:turn .35s ease-out}
+@keyframes turn{from{opacity:.2;transform:translateX(14px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.page{animation:none}}
+.page svg.art{display:block;width:100%;height:auto;border-radius:8px}
+.page p{margin:0;font-size:clamp(1.15rem,3.6vw,1.5rem);line-height:1.55;max-width:34em;padding:0 6px 4px;text-wrap:pretty}
+.page p + p{margin-top:-4px}
+.cover{text-align:center;align-items:center}
+.cover h1{font-family:var(--display);font-weight:400;font-size:clamp(2.1rem,9vw,4rem);line-height:1.05;margin:10px 0 0;color:var(--chili);text-wrap:balance}
+.cover .by{font-size:1rem;color:var(--soft);letter-spacing:.08em;text-transform:uppercase;margin:0}
+.end{font-family:var(--display);font-size:clamp(1.6rem,6vw,2.4rem);color:var(--chili);text-align:center;margin:0}
+nav{display:flex;align-items:center;justify-content:space-between;gap:12px}
+nav button{font-family:var(--display);font-size:1.1rem;background:var(--chili);color:var(--chili-ink);border:0;border-radius:999px;padding:12px 22px;cursor:pointer;min-width:6.5em}
+nav button:disabled{opacity:.35;cursor:default}
+nav button:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+#count{color:var(--soft);font-size:1rem;text-align:center}
+.say{font-family:var(--display)}
+</style>
+
+<!-- Shared drawings -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+  <linearGradient id="gDay" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fd3f0"/><stop offset="1" stop-color="#ffe2b0"/></linearGradient>
+  <linearGradient id="gNight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#141038"/><stop offset="1" stop-color="#3d3277"/></linearGradient>
+  <linearGradient id="gSet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b2a78"/><stop offset=".5" stop-color="#e8566a"/><stop offset="1" stop-color="#ffb347"/></linearGradient>
+  <radialGradient id="gGlow"><stop offset="0" stop-color="#ffb347" stop-opacity=".75"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient>
+
+  <g id="cactus">
+    <path d="M-34,-70 v-22 M34,-50 v-30" stroke="#3f8f5a" stroke-width="18" stroke-linecap="round" fill="none"/>
+    <path d="M-34,-70 h30 M34,-50 h-30" stroke="#3f8f5a" stroke-width="18" stroke-linecap="round" fill="none"/>
+    <rect x="-14" y="-130" width="28" height="134" rx="14" fill="#4aa368"/>
+    <path d="M0,-118 v112" stroke="#3f8f5a" stroke-width="3" fill="none"/>
+    <circle cx="2" cy="-132" r="6" fill="#ff7fa0"/>
+  </g>
+
+  <g id="bgDay">
+    <rect width="800" height="480" fill="url(#gDay)"/>
+    <circle cx="670" cy="85" r="42" fill="#ffd84d"/>
+    <path d="M0,330 H60 L80,250 H200 L220,330 H430 L448,275 H570 L586,330 H800 V480 H0Z" fill="#d9774a"/>
+    <path d="M80,250 H200 L205,270 H75Z M448,275 H570 L575,292 H443Z" fill="#c3613a"/>
+    <rect y="345" width="800" height="135" fill="#edc27e"/>
+    <path d="M0,440 Q200,410 400,435 T800,425 V480 H0Z" fill="#e0b068"/>
+  </g>
+  <g id="stars" fill="#fff6c9">
+    <circle cx="60" cy="50" r="3"/><circle cx="150" cy="110" r="2"/><circle cx="230" cy="40" r="2.5"/><circle cx="330" cy="90" r="2"/>
+    <circle cx="420" cy="35" r="3"/><circle cx="500" cy="120" r="2"/><circle cx="560" cy="60" r="2.5"/><circle cx="740" cy="150" r="2"/>
+    <circle cx="110" cy="180" r="2"/><circle cx="380" cy="170" r="2.5"/><circle cx="620" cy="190" r="2"/><circle cx="770" cy="40" r="3"/>
+  </g>
+  <g id="bgNight">
+    <rect width="800" height="480" fill="url(#gNight)"/>
+    <use href="#stars"/>
+    <circle cx="680" cy="85" r="36" fill="#fff3c4"/><circle cx="694" cy="76" r="32" fill="#1d1848"/>
+    <path d="M0,330 H60 L80,250 H200 L220,330 H430 L448,275 H570 L586,330 H800 V480 H0Z" fill="#2a2458"/>
+    <rect y="345" width="800" height="135" fill="#4a4079"/>
+  </g>
+  <g id="bgSet">
+    <rect width="800" height="480" fill="url(#gSet)"/>
+    <circle cx="400" cy="335" r="110" fill="#ffe07a"/>
+    <path d="M0,330 H60 L80,250 H200 L220,330 H560 L578,275 H700 L716,330 H800 V480 H0Z" fill="#7b2f4a"/>
+    <rect y="345" width="800" height="135" fill="#a8523f"/>
+    <path d="M0,440 Q200,415 400,435 T800,425 V480 H0Z" fill="#8f4136"/>
+  </g>
+
+  <g id="hat">
+    <ellipse cx="0" cy="0" rx="48" ry="9" fill="#8a5a2b"/>
+    <path d="M-25,-2 L-21,-32 Q0,-20 21,-32 L25,-2Z" fill="#a06a35"/>
+    <path d="M-25,-2 L-24,-10 H24 L25,-2Z" fill="#b8391f"/>
+  </g>
+  <g id="cowboy">
+    <rect x="-22" y="-82" width="19" height="72" fill="#3b5b8c"/><rect x="3" y="-82" width="19" height="72" fill="#3b5b8c"/>
+    <path d="M-26,0 v-10 q0,-6 6,-6 h14 v16Z M26,0 v-10 q0,-6 -6,-6 h-14 v16Z" fill="#6b3a1e"/>
+    <path d="M-28,-138 L-44,-98 M28,-138 L44,-98" stroke="#d9583b" stroke-width="14" stroke-linecap="round" fill="none"/>
+    <circle cx="-45" cy="-93" r="8" fill="#e8b98f"/><circle cx="45" cy="-93" r="8" fill="#e8b98f"/>
+    <rect x="-28" y="-150" width="56" height="74" rx="10" fill="#d9583b"/>
+    <path d="M-28,-140 q0,-10 10,-10 h4 v66 h-14Z M28,-140 q0,-10 -10,-10 h-4 v66 h14Z" fill="#7a4a26"/>
+    <rect x="-28" y="-86" width="56" height="9" fill="#3a2414"/><rect x="-6" y="-88" width="12" height="13" rx="2" fill="#f2c14e"/>
+    <path d="M-20,-152 H20 L0,-128Z" fill="#f2c14e"/>
+    <circle cx="0" cy="-172" r="24" fill="#e8b98f"/>
+    <path d="M-23,-180 Q0,-204 23,-180 Q0,-190 -23,-180Z" fill="#5a3415"/>
+    <circle cx="-9" cy="-174" r="3" fill="#2b190d"/><circle cx="9" cy="-174" r="3" fill="#2b190d"/>
+    <path d="M-16,-162 Q-8,-170 0,-164 Q8,-170 16,-162 Q8,-158 0,-161 Q-8,-158 -16,-162Z" fill="#5a3415"/>
+    <path d="M-7,-156 Q0,-151 7,-156" stroke="#8a4a2b" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </g>
+  <g id="cowboyHat"><use href="#cowboy"/><use href="#hat" transform="translate(0,-190)"/></g>
+
+  <g id="cat">
+    <path d="M20,-10 Q52,-8 46,-40 Q44,-50 36,-46" stroke="#e8892b" stroke-width="10" stroke-linecap="round" fill="none"/>
+    <ellipse cx="0" cy="-30" rx="25" ry="31" fill="#e8892b"/>
+    <ellipse cx="0" cy="-22" rx="12" ry="19" fill="#fbe3c0"/>
+    <ellipse cx="-10" cy="-3" rx="9" ry="5" fill="#fbe3c0"/><ellipse cx="10" cy="-3" rx="9" ry="5" fill="#fbe3c0"/>
+    <path d="M-21,-76 L-16,-100 L-3,-86Z M21,-76 L16,-100 L3,-86Z" fill="#e8892b"/>
+    <path d="M-17,-82 L-15,-93 L-8,-86Z M17,-82 L15,-93 L8,-86Z" fill="#f7a8b0"/>
+    <circle cx="0" cy="-68" r="23" fill="#e8892b"/>
+    <path d="M-6,-90 v9 M0,-91 v11 M6,-90 v9" stroke="#c46a17" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <ellipse cx="-9" cy="-70" rx="5" ry="6.5" fill="#7ed36b"/><ellipse cx="9" cy="-70" rx="5" ry="6.5" fill="#7ed36b"/>
+    <ellipse cx="-9" cy="-70" rx="1.8" ry="5.5" fill="#1d1a14"/><ellipse cx="9" cy="-70" rx="1.8" ry="5.5" fill="#1d1a14"/>
+    <path d="M-3,-62 H3 L0,-58Z" fill="#f08a9b"/>
+    <path d="M0,-58 v3 M0,-55 q-4,4 -7,1 M0,-55 q4,4 7,1" stroke="#7a3d14" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    <path d="M-14,-60 h-16 M-14,-56 l-15,5 M14,-60 h16 M14,-56 l15,5" stroke="#fff8e8" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <g id="horse">
+    <path d="M-78,-110 Q-112,-90 -100,-40" stroke="#4a2d17" stroke-width="12" stroke-linecap="round" fill="none"/>
+    <rect x="-52" y="-80" width="14" height="76" fill="#84552f"/><rect x="38" y="-80" width="14" height="76" fill="#84552f"/>
+    <rect x="-70" y="-80" width="15" height="76" fill="#a66a3c"/><rect x="56" y="-80" width="15" height="76" fill="#a66a3c"/>
+    <path d="M-52,-4 h14 v6 h-14Z M38,-4 h14 v6 h-14Z M-70,-4 h15 v6 h-15Z M56,-4 h15 v6 h-15Z" fill="#2b190d"/>
+    <ellipse cx="0" cy="-100" rx="82" ry="38" fill="#a66a3c"/>
+    <path d="M48,-118 L92,-190 L122,-172 L84,-92Z" fill="#a66a3c"/>
+    <ellipse cx="120" cy="-176" rx="32" ry="17" transform="rotate(22 120 -176)" fill="#a66a3c"/>
+    <ellipse cx="142" cy="-166" rx="12" ry="11" fill="#c98e60"/>
+    <path d="M94,-196 L100,-214 L108,-194Z" fill="#a66a3c"/>
+    <path d="M52,-124 Q60,-170 96,-198 L88,-180 Q70,-150 66,-116Z" fill="#4a2d17"/>
+    <circle cx="116" cy="-182" r="4" fill="#1d1a14"/><circle cx="146" cy="-166" r="2" fill="#4a2d17"/>
+    <path d="M-34,-134 Q0,-150 34,-134 L30,-104 H-30Z" fill="#b8391f"/>
+    <path d="M-24,-138 Q0,-152 24,-138 L20,-120 H-20Z" fill="#5a3415"/>
+  </g>
+  <g id="rider">
+    <use href="#cowboyHat" transform="translate(0,-82) scale(.75)"/>
+    <use href="#horse"/>
+    <path d="M-4,-128 L8,-76" stroke="#3b5b8c" stroke-width="15" stroke-linecap="round" fill="none"/>
+    <path d="M0,-66 h22 v-8 q0,-6 -6,-6 h-16Z" fill="#6b3a1e"/>
+  </g>
+
+  <g id="fire">
+    <circle cx="0" cy="-30" r="150" fill="url(#gGlow)"/>
+    <rect x="-46" y="-12" width="92" height="14" rx="7" fill="#5a3415" transform="rotate(12)"/>
+    <rect x="-46" y="-12" width="92" height="14" rx="7" fill="#6b3a1e" transform="rotate(-12)"/>
+    <path d="M-26,-6 Q-38,-48 -4,-84 Q-2,-58 14,-66 Q36,-36 24,-6Z" fill="#f2702c"/>
+    <path d="M-13,-6 Q-18,-30 0,-52 Q16,-28 12,-6Z" fill="#ffd84d"/>
+  </g>
+  <g id="log">
+    <rect x="-120" y="-64" width="240" height="64" rx="30" fill="#6b3a1e"/>
+    <ellipse cx="96" cy="-32" rx="22" ry="30" fill="#c98e60"/><ellipse cx="96" cy="-32" rx="11" ry="16" fill="none" stroke="#8a5a2b" stroke-width="3"/>
+    <path d="M-90,-44 h70 M-60,-22 h90" stroke="#4a2d17" stroke-width="3" stroke-linecap="round" fill="none"/>
+  </g>
+  <g id="snake">
+    <path d="M90,-6 Q70,-30 50,-6 T10,-6 T-30,-6 Q-44,-10 -44,-34" stroke="#8aa63a" stroke-width="14" stroke-linecap="round" fill="none"/>
+    <path d="M90,-6 l10,-4 l8,-2 l7,-3" stroke="#e0c074" stroke-width="9" stroke-linecap="round" stroke-dasharray="5 4" fill="none"/>
+    <ellipse cx="-46" cy="-44" rx="15" ry="11" fill="#8aa63a"/>
+    <circle cx="-52" cy="-48" r="3" fill="#1d1a14"/>
+    <path d="M-60,-40 l-16,2 l-6,-5 M-76,-38 l-6,5" stroke="#b8391f" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </g>
+</defs>
+</svg>
+
+<main class="book">
+
+<section class="page cover" data-page>
+  <h1>The Cowboy and Cat</h1>
+  <p class="by">A campfire story</p>
+  <svg class="art" viewBox="0 0 800 480" role="img" aria-label="A cowboy in a tall hat and an orange cat stand side by side in the desert.">
+    <use href="#bgDay"/>
+    <use href="#cactus" transform="translate(120,385) scale(1.2)"/>
+    <use href="#cactus" transform="translate(700,370) scale(.8)"/>
+    <ellipse cx="400" cy="432" rx="170" ry="12" fill="#c99a55"/>
+    <use href="#cowboyHat" transform="translate(340,430) scale(1.35)"/>
+    <use href="#cat" transform="translate(490,430) scale(1.5)"/>
+  </svg>
+</section>
+
+<section class="page" data-page hidden>
+  <svg class="art" viewBox="0 0 800 480" role="img" aria-label="A cowboy rides a brown horse through the sunny desert.">
+    <use href="#bgDay"/>
+    <use href="#cactus" transform="translate(110,380)"/>
+    <use href="#cactus" transform="translate(720,372) scale(.7)"/>
+    <ellipse cx="410" cy="424" rx="130" ry="10" fill="#c99a55"/>
+    <use href="#rider" transform="translate(400,420) scale(1.25)"/>
+  </svg>
+  <p>Out where the hills are orange and the sky goes on forever, there lived a cowboy named Dusty.</p>
+  <p>Dusty had a tall hat, a slow horse named Pickle, and nobody to talk to.</p>
+</section>
+
+<section class="page" data-page hidden>
+  <svg class="art" viewBox="0 0 800 480" role="img" aria-label="At night the cowboy sits on a log by a campfire. Two green eyes glow in the dark beside a cactus.">
+    <use href="#bgNight"/>
+    <use href="#cactus" transform="translate(640,385)" opacity=".55"/>
+    <ellipse cx="702" cy="352" rx="7" ry="9" fill="#9dff7a"/><ellipse cx="728" cy="352" rx="7" ry="9" fill="#9dff7a"/>
+    <ellipse cx="702" cy="352" rx="2" ry="7" fill="#141038"/><ellipse cx="728" cy="352" rx="2" ry="7" fill="#141038"/>
+    <use href="#fire" transform="translate(470,420) scale(1.2)"/>
+    <use href="#cowboyHat" transform="translate(230,410) scale(1.15)"/>
+    <use href="#log" transform="translate(240,425)"/>
+  </svg>
+  <p>Every night Dusty sat by his fire and talked to the stars. The stars never talked back.</p>
+  <p>But one night, two green eyes blinked in the dark.</p>
+</section>
+
+<section class="page" data-page hidden>
+  <svg class="art" viewBox="0 0 800 480" role="img" aria-label="In the morning an orange cat sits inside the cowboy's upside-down hat while the hatless cowboy looks on.">
+    <use href="#bgDay"/>
+    <use href="#cactus" transform="translate(700,380)"/>
+    <use href="#cowboy" transform="translate(200,425) scale(1.25)"/>
+    <text x="262" y="150" font-family="Rye,serif" font-size="44" fill="#b8391f">?</text>
+    <ellipse cx="500" cy="428" rx="120" ry="10" fill="#c99a55"/>
+    <use href="#cat" transform="translate(500,400) scale(1.6)"/>
+    <use href="#hat" transform="translate(500,345) scale(2.4,-2.4)"/>
+  </svg>
+  <p>In the morning, Dusty reached for his hat. There was a cat in it.</p>
+  <p>“That’s my hat,” said Dusty. The cat yawned. It was her hat now.</p>
+</section>
+
+<section class="page" data-page hidden>
+  <svg class="art" viewBox="0 0 800 480" role="img" aria-label="The cowboy rides away on his horse and the cat follows behind, leaving little paw prints.">
+    <use href="#bgDay"/>
+    <use href="#cactus" transform="translate(60,375) scale(.8)"/>
+    <g fill="#b98a4a"><circle cx="40" cy="436" r="5"/><circle cx="75" cy="446" r="5"/><circle cx="110" cy="436" r="5"/><circle cx="145" cy="446" r="5"/></g>
+    <use href="#cat" transform="translate(215,435) scale(1.15)"/>
+    <use href="#rider" transform="translate(520,425) scale(1.2)"/>
+  </svg>
+  <p>“Cowboys don’t have cats,” said Dusty, and he rode away.</p>
+  <p>Clip, clop, went Pickle. Pit, pat, went the cat, right behind.</p>
+</section>
+
+<section class="page" data-page hidden>
+  <svg class="art" viewBox="0 0 800 480" role="img" aria-label="A rattlesnake blocks the trail in front of the frightened horse and cowboy.">
+    <use href="#bgDay"/>
+    <use href="#rider" transform="translate(240,425) scale(1.2)"/>
+    <text x="430" y="180" font-family="Rye,serif" font-size="64" fill="#b8391f">!!</text>
+    <use href="#snake" transform="translate(640,430) scale(1.5)"/>
+    <text x="590" y="330" font-family="Rye,serif" font-size="26" fill="#6b3a1e">tk-tk-tk</text>
+  </svg>
+  <p>Then Pickle stopped. <span class="say">Tk-tk-tk!</span> A rattlesnake lay across the trail, shaking its tail.</p>
+  <p>Pickle would not take one more step. Dusty’s knees went wobbly.</p>
+</section>
+
+<section class="page" data-page hidden>
+  <svg class="art" viewBox="0 0 800 480" role="img" aria-label="The cat arches her back with her fur standing up and hisses. The snake slithers away.">
+    <use href="#bgDay"/>
+    <g transform="translate(300,430) scale(2)">
+      <path d="M-44,-34 L-58,-100" stroke="#e8892b" stroke-width="18" stroke-linecap="round" fill="none"/>
+      <path d="M-46,0 V-36 Q0,-100 46,-36 V0 H30 V-24 Q0,-60 -30,-24 V0Z" fill="#e8892b"/>
+      <path d="M-34,-52 l-6,-14 l12,6 l-2,-16 l12,10 l2,-16 l10,12 l6,-14 l6,14 l10,-10 l0,16 l12,-6 l-6,14Z" fill="#e8892b"/>
+      <path d="M40,-66 L44,-90 L56,-76Z M76,-66 L72,-90 L60,-76Z" fill="#e8892b"/>
+      <circle cx="58" cy="-56" r="22" fill="#e8892b"/>
+      <path d="M44,-66 l10,5 M72,-66 l-10,5" stroke="#1d1a14" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <circle cx="50" cy="-58" r="3.5" fill="#7ed36b"/><circle cx="66" cy="-58" r="3.5" fill="#7ed36b"/>
+      <ellipse cx="58" cy="-45" rx="7" ry="6" fill="#7a1f2b"/>
+      <path d="M53,-49 l2,5 M63,-49 l-2,5" stroke="#fff8e8" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </g>
+    <text x="430" y="200" font-family="Rye,serif" font-size="58" fill="#b8391f">HISSSS!</text>
+    <use href="#snake" transform="translate(720,440) scale(-1,1)"/>
+    <path d="M590,425 h30 M585,440 h24" stroke="#b98a4a" stroke-width="4" stroke-linecap="round" fill="none"/>
+  </svg>
+  <p>But the cat was not wobbly. She puffed up as big as a tumbleweed and said, <span class="say">HISSSS!</span></p>
+  <p>The snake took one look and wiggled away as fast as it could go.</p>
+</section>
+
+<section class="page" data-page hidden>
+  <svg class="art" viewBox="0 0 800 480" role="img" aria-label="The cowboy smiles down at the cat sitting beside him. A heart floats between them.">
+    <use href="#bgDay"/>
+    <use href="#cactus" transform="translate(680,380)"/>
+    <ellipse cx="390" cy="432" rx="170" ry="11" fill="#c99a55"/>
+    <use href="#cowboyHat" transform="translate(310,430) scale(1.35)"/>
+    <use href="#cat" transform="translate(480,430) scale(1.5)"/>
+    <path d="M410,150 q-22,-26 -40,-6 q-14,18 40,56 q54,-38 40,-56 q-18,-20 -40,6Z" fill="#b8391f"/>
+  </svg>
+  <p>“Well, I’ll be,” said Dusty. “I reckon a cowboy <em>can</em> have a cat.”</p>
+  <p>He named her Biscuit, because she was warm and golden and just what he needed.</p>
+</section>
+
+<section class="page" data-page hidden>
+  <svg class="art" viewBox="0 0 800 480" role="img" aria-label="The cowboy rides into the sunset with the cat sitting on the horse behind him.">
+    <use href="#bgSet"/>
+    <use href="#cactus" transform="translate(110,385)" opacity=".8"/>
+    <g transform="translate(400,425) scale(1.25)">
+      <use href="#rider"/>
+      <use href="#cat" transform="translate(-52,-134) scale(.6)"/>
+    </g>
+  </svg>
+  <p>From then on, they rode together. Dusty talked, and Biscuit listened.</p>
+  <p>Sometimes she even talked back. “Mrrow,” she said, which means, “Keep going, partner.”</p>
+</section>
+
+<section class="page" data-page hidden>
+  <svg class="art" viewBox="0 0 800 480" role="img" aria-label="At night by the campfire, the cat sleeps curled up on the log next to the cowboy under the stars.">
+    <use href="#bgNight"/>
+    <use href="#fire" transform="translate(500,420) scale(1.2)"/>
+    <use href="#cowboyHat" transform="translate(200,410) scale(1.15)"/>
+    <use href="#log" transform="translate(250,425)"/>
+    <g transform="translate(305,362)">
+      <ellipse cx="0" cy="-16" rx="42" ry="20" fill="#e8892b"/>
+      <path d="M38,-12 Q20,8 -30,-2" stroke="#c46a17" stroke-width="9" stroke-linecap="round" fill="none"/>
+      <path d="M-44,-30 L-42,-48 L-30,-38Z M-18,-32 L-18,-50 L-30,-38Z" fill="#e8892b"/>
+      <circle cx="-30" cy="-24" r="17" fill="#e8892b"/>
+      <path d="M-40,-24 q4,4 8,0 M-28,-24 q4,4 8,0" stroke="#1d1a14" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </g>
+    <text x="300" y="285" font-family="Rye,serif" font-size="24" fill="#fff6c9">z</text>
+    <text x="322" y="260" font-family="Rye,serif" font-size="32" fill="#fff6c9">z</text>
+    <text x="350" y="228" font-family="Rye,serif" font-size="42" fill="#fff6c9">z</text>
+  </svg>
+  <p>That night, Dusty did not talk to the stars. He had a friend to say goodnight to.</p>
+  <p>“Goodnight, Biscuit.” And the cowboy and the cat fell fast asleep.</p>
+  <p class="end">The End</p>
+</section>
+
+<nav aria-label="Turn the page">
+  <button id="back" type="button">Back</button>
+  <span id="count" aria-live="polite"></span>
+  <button id="next" type="button">Next</button>
+</nav>
+</main>
+
+<script>
+(function(){
+  var pages=[].slice.call(document.querySelectorAll('[data-page]'));
+  var back=document.getElementById('back'),next=document.getElementById('next'),count=document.getElementById('count');
+  var i=0;
+  function show(n){
+    i=Math.max(0,Math.min(pages.length-1,n));
+    pages.forEach(function(p,k){p.hidden=k!==i;});
+    back.disabled=i===0;
+    next.textContent=i===0?'Read':(i===pages.length-1?'Again':'Next');
+    count.textContent=i===0?'Cover':'Page '+i+' of '+(pages.length-1);
+  }
+  back.addEventListener('click',function(){show(i-1);});
+  next.addEventListener('click',function(){show(i===pages.length-1?0:i+1);});
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight')show(i+1);
+    if(e.key==='ArrowLeft')show(i-1);
+  });
+  show(0);
+})();
+</script>
